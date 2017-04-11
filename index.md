@@ -5,13 +5,13 @@ In natural language processing, Latent Dirichlet Allocation (LDA) is a generativ
 ### Generative process
 Documents are represented as random mixtures over latent topics, where each topic is characterized by a distribution over words. LDA assumes the following generative process for a corpus D consisting of M documents each of length N<sub>i</sub>.
 
-1. Choose a multinomial topic distribution theta for the document (according to a Dirichlet distribution Dir(alpha) over a fixed set of K topics)
-2. Choose a multinomial term distribution \phi for the topic (according to a Dirichlet distribution Dir(\beta) over a fixed set of N terms)
+1. Choose a multinomial topic distribution &theta; for the document (according to a Dirichlet distribution Dir(&alpha;) over a fixed set of K topics)
+2. Choose a multinomial term distribution &phi; for the topic (according to a Dirichlet distribution Dir(&beta;) over a fixed set of N terms)
 3. For each word position
-	* choose a topic Z according to multinomial topic distribution theta.
-	* choose a word W according to multinomial term distribution \phi.
+	* choose a topic Z according to multinomial topic distribution &theta;.
+	* choose a word W according to multinomial term distribution &phi;.
 
-![Alt text](./Smoothed_LDA.png)
+<center>![Alt text](./Smoothed_LDA.png)</center>
 ### Implementation process
 Given a set of documents and a fixed topic number K, we want to use LDA to learn the topic representation of each document and the words associated to each topic.
 
@@ -19,22 +19,22 @@ Given a set of documents and a fixed topic number K, we want to use LDA to learn
 * Calculate global distributions for topic-term and doc-topic.
 * Iterate until convergence 
 	* For each document and each word
-		* Compute p(topic t | document d, word w) = C * p(topic t | document d) * p(word w | topic t) according to global distributions for each 		topic.
+		* Compute p(topic t | document d, word w) = C * p(topic t | document d) * p(word w | topic t) according to global distributions for each topic.
 		* Randomly assign one topic to current word according to above distribution.
 		* Update global distributions.
 
 ## Challenge
-The original algorithm is totally sequential. There are mainly three parts take up the most computation time so they are what we need to parallelize.
+The original algorithm is totally sequential. There are mainly three parts taking up the most computation time so they are what we need to parallelize.
 
 * Gibbs sampling is by definition sequential. Every choice of topic depends on all the other topics. We need to modify the algorithm and try approximate distributed LDA.
-* Multinomial topic distribution updating involves many independent computation steps and finally a normalization over all of them. We need to fully parallelize this part.
+* Multinomial topic distribution generation in each sampling involves many independent computation steps as well as probability normalization. We need to fully parallelize this part.
 * Faster sampling is the operation of assigning each word a topic. This operation will be called in a very high frequency. Though this operation will not be parallelized, we still need to find faster implementation.
 
-The basic idea is to split the gibbs sampling into different machines and each machine perform parallelized Update the distribution (please give it a fancy name) locally. Each machine will treat their local distribution as global distribution, and communicate to exchange their updates for every one or several iterations. This method has these challenges:
+The basic idea is to split the gibbs sampling into different machines and each machine updates their generative distribution models locally. Each machine will treat their local distribution as global distribution, and communicate to exchange their updates for every one or several iterations. This method has these challenges:
 
 * How to split the gibbs sampling.
 * Choose which synchronization model.
-* How to parallelize Update the distribution (please give it a fancy name) over GPUs.
+* How to parallelize Multinomial topic distribution generation given big topic number K and large corpus by GPUs in single node.
 * How to minimize the communication overheads between
 	- Different machines
 	- CPU and GPU
@@ -42,6 +42,7 @@ The basic idea is to split the gibbs sampling into different machines and each m
 
 ## Resources
 We plan to use latedays cluster for testing our system. The latedays cluster supports OpenMPI and CUDA which meets our requirements. The possible problem is that there maybe many other users using this cluster and have influence on our performance.
+
 ## Goals and Delieverables
 Plan to achieve:
 
@@ -56,6 +57,7 @@ Hope to achieve:
 
 ## Platform choice
 As mentioned before, we plan to use latedays clusters.
+
 ## Schedule
 
 |Dates        |Planned Goals                                                                      |
