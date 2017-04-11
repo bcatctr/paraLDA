@@ -1,4 +1,3 @@
 theme: jekyll-theme-cayman
-title: paraLDA
-author: Chen Hu, Jingcheng Yu
-description: "distributed, parallel latent dirichlet allocation algorithm"
+title: Distributed and Parallel Latent Dirichlet Allocation Algorithm
+description: Chen Hu, Jingcheng Yu
