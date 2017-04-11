@@ -11,7 +11,8 @@ Documents are represented as random mixtures over latent topics, where each topi
 	* choose a topic Z according to multinomial topic distribution &theta;.
 	* choose a word W according to multinomial term distribution &phi;.
 
-<center>![Alt text](./Smoothed_LDA.png)</center>
+<div style="text-align:center"><img src ="./Smoothed_LDA.png" /></div>
+
 ### Implementation process
 Given a set of documents and a fixed topic number K, we want to use LDA to learn the topic representation of each document and the words associated to each topic.
 
@@ -19,7 +20,7 @@ Given a set of documents and a fixed topic number K, we want to use LDA to learn
 * Calculate global distributions for topic-term and doc-topic.
 * Iterate until convergence 
 	* For each document and each word
-		* Compute p(topic t | document d, word w) = C * p(topic t | document d) * p(word w | topic t) according to global distributions for each topic.
+		* Compute p(topic t \| document d, word w) = C * p(topic t \| document d) * p(word w \| topic t) according to global distributions for each topic.
 		* Randomly assign one topic to current word according to above distribution.
 		* Update global distributions.
 
