@@ -2,7 +2,8 @@
 // Created by CHEN HU on 4/23/17.
 //
 
-
+#include <iostream>
+#include <math.h>
 #include "lda.h"
 
 lda::lda(std::string dataDir, int num_topics, double alpha, double beta, int num_iterations): gen(std::random_device()()), dis(0,1){
@@ -97,6 +98,8 @@ void lda::runGibbs() {
 
             }
         }
+        double llh = this->getLogLikelihood();
+        std::cout << "Iteration "<< iter << ": " << llh << std::endl;
     }
 }
 
@@ -120,4 +123,47 @@ int lda::resample(std::vector<double> multi_dis) {
     }
     return this->num_topics - 1;
 
+}
+
+double lda::logDirichlet(double *X, int N) {
+    double sumLogGamma = 0.0;
+    double logSumGamma = 0.0;
+    for(int i = 0; i < N ; i++){
+        sumLogGamma += std::lgamma(X[i]);
+        logSumGamma += X[i];
+    }
+
+    return sumLogGamma - std::lgamma(logSumGamma);
+}
+
+double lda::logDirichlet(double x, int N) {
+    return N * std::lgamma(x) - std::lgamma(N * x);
+}
+
+double lda::getLogLikelihood() {
+    double lik = 0.0;
+
+    double* temp = new double[this->vocab_size];
+    for(int k = 0; k < this->num_topics; k++){
+        int* word_vector = this->topic_word_table[k];
+        for(int w = 0; w < this->vocab_size; w++){
+            temp[w] = word_vector[w] + this->beta;
+        }
+        lik += this->logDirichlet(temp, this->vocab_size);
+        lik -= this->logDirichlet(this->beta, this->vocab_size);
+    }
+    delete[] temp;
+
+    temp = new double[this->num_topics];
+    for(int d = 0; d < this->num_docs; d++){
+        int* topic_vector = this->doc_topic_table[d];
+        for(int k = 0; k < this->num_topics; k++){
+            temp[k] = topic_vector[k] + this->alpha;
+        }
+        lik += this->logDirichlet(temp, this->num_topics);
+        lik -= this->logDirichlet(this->alpha, this->num_topics);
+    }
+    delete[] temp;
+
+    return lik;
 }

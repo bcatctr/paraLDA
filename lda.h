@@ -35,6 +35,9 @@ public:
     void initialize();
     void runGibbs();
     int resample(std::vector<double> dis);
+    double getLogLikelihood();
+    double logDirichlet(double* X, int N);
+    double logDirichlet(double x, int N);
 
 };
 
