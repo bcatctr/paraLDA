@@ -8,6 +8,7 @@
 
 #include <string>
 #include <vector>
+#include <random>
 #include "dataLoader.h"
 
 class lda {
@@ -21,8 +22,8 @@ class lda {
     int* topic_table;
     int** topic_word_table;
     int** doc_topic_table;
-    std::vector<std::vector<int>*> W;
-    std::vector<std::vector<int>*> T;
+    std::vector<std::vector<int>> W;
+    std::vector<std::vector<int>> T;
 
     std::mt19937 gen;
     std::uniform_real_distribution<double> dis;

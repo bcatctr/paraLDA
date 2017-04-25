@@ -2,15 +2,15 @@
 // Created by CHEN HU on 4/23/17.
 //
 
-#include <random>
+
 #include "lda.h"
 
-lda::lda(std::string dataFile, int num_topics, double alpha, double beta, int num_iterations): gen(std::random_device()()), dis(0,1){
+lda::lda(std::string dataDir, int num_topics, double alpha, double beta, int num_iterations): gen(std::random_device()()), dis(0,1){
     this->num_topics = num_topics;
     this->alpha = alpha;
     this->beta = beta;
     this->num_iterations = num_iterations;
-    this->data_loader = new dataLoader(dataFile);
+    this->data_loader = new dataLoader(dataDir);
 
     this->num_docs = this->data_loader->docsCount();
     this->vocab_size = this->data_loader->volcabSize();
@@ -28,7 +28,8 @@ lda::lda(std::string dataFile, int num_topics, double alpha, double beta, int nu
 
     this->T.resize(this->W.size());
     for(int i = 0; i < this->W.size(); i++){
-        this->T.at(i) = new std::vector<int>(this->W.at(i)->size(), -1);
+        std::vector<int> temp(this->W.at(i).size(), -1);
+        this->T.at(i) = temp;
     }
 
 
@@ -46,10 +47,7 @@ lda::~lda() {
         delete[] this->doc_topic_table[i];
     delete[] this->doc_topic_table;
 
-    for(int i = 0; i < this->T.size(); i++)
-        delete this->T.at(i);
     this->T.clear();
-
 }
 
 void lda::initialize() {
@@ -58,10 +56,10 @@ void lda::initialize() {
     std::uniform_int_distribution<> int_dis(0,this->num_topics - 1);
 
     for(int d = 0; d < this->T.size(); d++){
-        for(int j = 0; j < this->T.at(d)->size(); j++){
-            int word = this->W.at(d)->at(j);
+        for(int j = 0; j < this->T.at(d).size(); j++){
+            int word = this->W.at(d).at(j);
             int topic = int_dis(int_gen);
-            this->T.at(d)->at(j) = topic;
+            this->T.at(d).at(j) = topic;
             this->doc_topic_table[d][topic] ++;
             this->topic_word_table[topic][word] ++;
             this->topic_table[topic] ++;
@@ -78,9 +76,9 @@ void lda::runGibbs() {
 
     for(int iter = 0; iter < this->num_iterations; iter++){
         for(int d = 0; d < this->W.size(); d++){
-            for(int j = 0; j < this->W.at(d)->size(); j++){
-                int word = this->W.at(d)->at(j);
-                int topic = this->T.at(d)->at(j);
+            for(int j = 0; j < this->W.at(d).size(); j++){
+                int word = this->W.at(d).at(j);
+                int topic = this->T.at(d).at(j);
                 // ignore current position
                 this->doc_topic_table[d][topic] --;
                 this->topic_word_table[topic][word] --;
@@ -92,7 +90,7 @@ void lda::runGibbs() {
                 }
 
                 topic = this->resample(dis);
-                this->T.at(d)->at(j) = topic;
+                this->T.at(d).at(j) = topic;
                 this->doc_topic_table[d][topic] ++;
                 this->topic_word_table[topic][word] ++;
                 this->topic_table[topic] ++;

@@ -12,13 +12,11 @@
 class dataLoader {
 
     std::string dataFile;
-
-
+    std::vector<std::string> dict;
+    std::vector<std::vector<int>> corpus;
 
 public:
-    dataLoader(std::string dataFile){
-        this->dataFile = dataFile;
-    }
+    dataLoader(std::string dataDir);
 
     ~dataLoader();
 
@@ -26,7 +24,9 @@ public:
 
     int volcabSize();
 
-    std::vector<std::vector<int>*> loadCorpus();
+    std::vector<std::string> loadDict();
+
+    std::vector<std::vector<int>> loadCorpus();
 
 };
 
