@@ -22,7 +22,7 @@ dataLoader::dataLoader(std::string dataDir) {
         std::stringstream ss(line);
         std::string tok;
 
-        while(std::getline(ss, tok, ' ')){
+        while(std::getline(ss, tok, ',')){
             doc.push_back(std::stoi(tok));
         }
 

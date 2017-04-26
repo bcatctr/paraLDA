@@ -12,8 +12,10 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     std::unordered_map<std::string, std::string> paras = parseArg(argv[1]);
-    lda my_lda(paras["dataDirectory"],std::stoi(paras["numTopics"]),std::stod(paras["alpha"]),std::stod(paras["beta"]),std::stoi(paras["numIterations"]));
+    lda my_lda(paras["dataDirectory"],paras["outputFile"],std::stoi(paras["numTopics"]),std::stod(paras["alpha"]),std::stod(paras["beta"]),std::stoi(paras["numIterations"]));
     my_lda.runGibbs();
+    my_lda.printTopicWord();
+    my_lda.printDocTopic();
 
     return 0;
 }

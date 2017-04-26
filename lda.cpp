@@ -4,14 +4,16 @@
 
 #include <iostream>
 #include <math.h>
+#include <fstream>
 #include "lda.h"
 
-lda::lda(std::string dataDir, int num_topics, double alpha, double beta, int num_iterations): gen(std::random_device()()), dis(0,1){
+lda::lda(std::string dataDir, std::string output, int num_topics, double alpha, double beta, int num_iterations): gen(std::random_device()()), dis(0,1){
     this->num_topics = num_topics;
     this->alpha = alpha;
     this->beta = beta;
     this->num_iterations = num_iterations;
     this->data_loader = new dataLoader(dataDir);
+    this->output = output;
 
     this->num_docs = this->data_loader->docsCount();
     this->vocab_size = this->data_loader->volcabSize();
@@ -87,7 +89,7 @@ void lda::runGibbs() {
 
                 // recalculate topic distribution
                 for(int k = 0; k < this->num_topics; k++){
-                    dis.at(k) = (this->topic_word_table[k][word] + this->beta)/(double)(this->topic_table[j] + this->beta * this->vocab_size) * (this->doc_topic_table[d][k] + this->alpha);
+                    dis.at(k) = (this->topic_word_table[k][word] + this->beta)/(double)(this->topic_table[k] + this->beta * this->vocab_size) * (this->doc_topic_table[d][k] + this->alpha);
                 }
 
                 topic = this->resample(dis);
@@ -166,4 +168,27 @@ double lda::getLogLikelihood() {
     delete[] temp;
 
     return lik;
+}
+
+void lda::printTopicWord() {
+    std::string fileName = "Output/" + this->output + ".tw";
+    std::ofstream out_file(fileName);
+    for(int k = 0; k < this->num_topics; k++){
+        for(int w = 0; w < this->vocab_size - 1; w++){
+            out_file << this->topic_word_table[k][w] << ",";
+        }
+        out_file << this->topic_word_table[k][this->vocab_size - 1] << "\n";
+    }
+}
+
+void lda::printDocTopic() {
+    std::string fileName = "Output/" + this->output + ".dt";
+    std::ofstream out_file(fileName);
+    for(int d = 0; d < this->num_docs; d++){
+        for(int k = 0; k < this->num_topics - 1; k++){
+            out_file << this->doc_topic_table[d][k] << ",";
+        }
+        out_file << this->doc_topic_table[d][this->num_topics - 1] << "\n";
+    }
+
 }

@@ -1,5 +1,5 @@
-dataDirectory:NIPS_1987-2015
+dataDirectory:20news
 numTopics:20
-alpha:1.0
-beta:1.0
-numIterations:100
+alpha:0.1
+beta:0.1
+numIterations:30
