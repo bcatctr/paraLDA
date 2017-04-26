@@ -69,6 +69,9 @@ As mentioned before, we plan to use latedays clusters.
 |5/1-5/8      |Optimize the results and conduct experiments                                       |
 |5/9-5/12     |Prepare for final report                                                           |
 
+[Check Point](checkpoint.md)
+
+
 ## References
 [1] Blei, David M., Andrew Y. Ng, and Michael I. Jordan. "Latent dirichlet allocation." Journal of machine Learning research 3.Jan (2003): 993-1022.
 
