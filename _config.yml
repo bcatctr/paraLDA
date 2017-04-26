@@ -1,5 +1,6 @@
 theme: jekyll-theme-cayman
 title: Parallel LDA
 description: Chen Hu, Jingcheng Yu
-header_pages:
- - checkpoint.md
+navbar-links:
+  CheckPoint: checkpoint.md
+  View on GitHub: "https://github.com/bcatctr/paraLDA"
