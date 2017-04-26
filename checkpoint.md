@@ -23,7 +23,7 @@ We still Hope to achieve:
 |:---------   |:----------------------------------------------------------------------------------|:--------|
 |4/10-4/16    |Prepare dataset; Preprocess datasets; Read related papers and make system design   |  Done  |
 |4/17-4/23    |Implement sequential; Build Evaluation metrics; Prepare for checkpoint report      |  Done  |
-|4/24-4/26    |Test the sequential version implementaion                                          |  Need to compare with peer <br> sequential version  |
+|4/24-4/26    |Test the sequential version implementaion                                          |  Need to compare with peer sequential version  |
 |4/27-4/30    |Implement distributed version among nodes in latedays machine                      |    |
 |5/1-5/4      |Implement thread parallelism on each worker; Sparse LDA Speedup                    |    |
 |5/5-5/8      |Implement faster sampling; Optimize LDA initialization                             |    |
