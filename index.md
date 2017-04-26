@@ -50,7 +50,7 @@ Plan to achieve:
 * An OpenMPI and CUDA based, distributed and parallel LDA implementation.
 * Implement banchmark based on Standford NLP toolkits.
 * Conduct experiments on NYTimes dataset.
-* Achieve high performance (Can we have a expect value here?) over banchmark results.
+* Achieve high performance over banchmark results.
 
 Hope to achieve:
 
