@@ -1,3 +1,5 @@
 theme: jekyll-theme-cayman
 title: Parallel LDA
 description: Chen Hu, Jingcheng Yu
+header_pages:
+ - checkpoint.md
