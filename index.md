@@ -1,3 +1,6 @@
+## CheckPoint
+Please Visit [Check Point](checkpoint.md).
+
 ## Summary
 We are going to implement a distributed, parallel LDA (latent dirichlet allocation) algorithm for building topic model on large corpus using the OpenMPI library and CUDA parallel programming model. We will parallelize the original sequential algorithm over a cluster of GPUs.
 ## Background
@@ -69,7 +72,6 @@ As mentioned before, we plan to use latedays clusters.
 |5/1-5/8      |Optimize the results and conduct experiments                                       |
 |5/9-5/12     |Prepare for final report                                                           |
 
-[Check Point](checkpoint.md)
 
 
 ## References
