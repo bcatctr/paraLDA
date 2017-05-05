@@ -21,7 +21,7 @@ int main(int argc, char *argv[]) {
 }
 
 std::unordered_map<std::string, std::string> parseArg(char *fileName){
-    std::ifstream paraFile("parameters.txt");
+    std::ifstream paraFile(fileName);
 
     std::string line;
     std::unordered_map<std::string, std::string> paras;

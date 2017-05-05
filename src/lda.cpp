@@ -20,17 +20,17 @@ lda::lda(std::string dataDir, std::string output, int num_topics, double alpha, 
 
     this->topic_table = new int[this->num_topics]();
     this->topic_word_table = new int*[this->num_topics];
-    for(int i = 0; i < this->num_topics; i++)
+    for(int i = 0; i < (int)this->num_topics; i++)
         this->topic_word_table[i] = new int[this->vocab_size]();
 
     this->doc_topic_table = new int*[this->num_docs];
-    for(int i = 0; i < this->num_docs; i++)
+    for(int i = 0; i < (int) this->num_docs; i++)
         this->doc_topic_table[i] = new int[this->num_topics]();
 
     this->W = this->data_loader->loadCorpus();
 
     this->T.resize(this->W.size());
-    for(int i = 0; i < this->W.size(); i++){
+    for(int i = 0; i < (int)this->W.size(); i++){
         std::vector<int> temp(this->W.at(i).size(), -1);
         this->T.at(i) = temp;
     }
@@ -58,8 +58,8 @@ void lda::initialize() {
     std::mt19937 int_gen(rd());
     std::uniform_int_distribution<> int_dis(0,this->num_topics - 1);
 
-    for(int d = 0; d < this->T.size(); d++){
-        for(int j = 0; j < this->T.at(d).size(); j++){
+    for(int d = 0; d < (int) this->T.size(); d++){
+        for(int j = 0; j < (int) this->T.at(d).size(); j++){
             int word = this->W.at(d).at(j);
             int topic = int_dis(int_gen);
             this->T.at(d).at(j) = topic;
@@ -78,8 +78,8 @@ void lda::runGibbs() {
     std::vector<double> dis(this->num_topics,0);
 
     for(int iter = 0; iter < this->num_iterations; iter++){
-        for(int d = 0; d < this->W.size(); d++){
-            for(int j = 0; j < this->W.at(d).size(); j++){
+        for(int d = 0; d < (int) this->W.size(); d++){
+            for(int j = 0; j < (int) this->W.at(d).size(); j++){
                 int word = this->W.at(d).at(j);
                 int topic = this->T.at(d).at(j);
                 // ignore current position
