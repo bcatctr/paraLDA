@@ -5,9 +5,13 @@
 #include <iostream>
 #include <math.h>
 #include <fstream>
+#include <Log.h>
 #include "lda.h"
+#include "CycleTimer.h"
 
-lda::lda(std::string dataDir, std::string output, int num_topics, double alpha, double beta, int num_iterations): gen(std::random_device()()), dis(0,1){
+
+lda::lda(std::string dataDir, std::string output, int num_topics, double alpha, double beta, int num_iterations)
+        : gen(std::random_device()()), dis(0, 1) {
     this->num_topics = num_topics;
     this->alpha = alpha;
     this->beta = beta;
@@ -15,57 +19,55 @@ lda::lda(std::string dataDir, std::string output, int num_topics, double alpha, 
     this->data_loader = new dataLoader(dataDir);
     this->output = output;
 
-    this->num_docs = this->data_loader->docsCount();
-    this->vocab_size = this->data_loader->volcabSize();
+    num_docs = data_loader->docsCount();
+    vocab_size = data_loader->vocabSize();
 
-    this->topic_table = new int[this->num_topics]();
-    this->topic_word_table = new int*[this->num_topics];
-    for(int i = 0; i < (int)this->num_topics; i++)
-        this->topic_word_table[i] = new int[this->vocab_size]();
+    topic_table = new int[num_topics]();
+    topic_word_table = new int*[num_topics];
+    for(int i = 0; i < num_topics; i++)
+        topic_word_table[i] = new int[vocab_size]();
 
-    this->doc_topic_table = new int*[this->num_docs];
-    for(int i = 0; i < (int) this->num_docs; i++)
-        this->doc_topic_table[i] = new int[this->num_topics]();
+    doc_topic_table = new int*[num_docs];
+    for(int i = 0; i < num_docs; i++)
+        doc_topic_table[i] = new int[num_topics]();
 
-    this->W = this->data_loader->loadCorpus();
+    W = data_loader->loadCorpus();
 
-    this->T.resize(this->W.size());
-    for(int i = 0; i < (int)this->W.size(); i++){
-        std::vector<int> temp(this->W.at(i).size(), -1);
-        this->T.at(i) = temp;
+    T.resize(W.size());
+    for(int i = 0; i < (int)W.size(); i++){
+        std::vector<int> temp(W[i].size(), -1);
+        T[i] = temp;
     }
-
-
 }
 
 lda::~lda() {
-    delete this->data_loader;
-    delete[] this->topic_table;
+    delete data_loader;
+    delete[] topic_table;
 
-    for(int i = 0; i < this->num_topics; i++)
-        delete[] this->topic_word_table[i];
-    delete[] this->topic_word_table;
+    for(int i = 0; i < num_topics; i++)
+        delete[] topic_word_table[i];
+    delete[] topic_word_table;
 
-    for(int i = 0; i < this->num_docs; i++)
-        delete[] this->doc_topic_table[i];
-    delete[] this->doc_topic_table;
+    for(int i = 0; i < num_docs; i++)
+        delete[] doc_topic_table[i];
+    delete[] doc_topic_table;
 
-    this->T.clear();
+    T.clear();
 }
 
 void lda::initialize() {
     std::random_device rd;
     std::mt19937 int_gen(rd());
-    std::uniform_int_distribution<> int_dis(0,this->num_topics - 1);
+    std::uniform_int_distribution<> int_dis(0, num_topics - 1);
 
-    for(int d = 0; d < (int) this->T.size(); d++){
-        for(int j = 0; j < (int) this->T.at(d).size(); j++){
-            int word = this->W.at(d).at(j);
+    for(int d = 0; d < (int) T.size(); d++){
+        for(int j = 0; j < (int) T[d].size(); j++){
+            int word = W[d][j];
             int topic = int_dis(int_gen);
-            this->T.at(d).at(j) = topic;
-            this->doc_topic_table[d][topic] ++;
-            this->topic_word_table[topic][word] ++;
-            this->topic_table[topic] ++;
+            T[d][j] = topic;
+            doc_topic_table[d][topic] ++;
+            topic_word_table[topic][word] ++;
+            topic_table[topic] ++;
         }
     }
 
@@ -74,34 +76,35 @@ void lda::initialize() {
 
 void lda::runGibbs() {
 
-    this->initialize();
-    std::vector<double> dis(this->num_topics,0);
+    initialize();
+    std::vector<double> dis((size_t)num_topics, 0);
 
-    for(int iter = 0; iter < this->num_iterations; iter++){
-        for(int d = 0; d < (int) this->W.size(); d++){
-            for(int j = 0; j < (int) this->W.at(d).size(); j++){
-                int word = this->W.at(d).at(j);
-                int topic = this->T.at(d).at(j);
+    CycleTimer timer;
+    for(int iter = 0; iter < num_iterations; iter++){
+        for(int d = 0; d < (int) W.size(); d++){
+            for(int j = 0; j < (int) W[d].size(); j++){
+                int word = W[d][j];
+                int topic = T[d][j];
                 // ignore current position
-                this->doc_topic_table[d][topic] --;
-                this->topic_word_table[topic][word] --;
-                this->topic_table[topic] --;
+                doc_topic_table[d][topic] --;
+                topic_word_table[topic][word] --;
+                topic_table[topic] --;
 
                 // recalculate topic distribution
-                for(int k = 0; k < this->num_topics; k++){
-                    dis.at(k) = (this->topic_word_table[k][word] + this->beta)/(double)(this->topic_table[k] + this->beta * this->vocab_size) * (this->doc_topic_table[d][k] + this->alpha);
+                for(int k = 0; k < num_topics; k++) {
+                    dis[k] = (topic_word_table[k][word] + beta) / (topic_table[k] + beta * vocab_size) * (doc_topic_table[d][k] + alpha);
                 }
 
-                topic = this->resample(dis);
-                this->T.at(d).at(j) = topic;
-                this->doc_topic_table[d][topic] ++;
-                this->topic_word_table[topic][word] ++;
-                this->topic_table[topic] ++;
+                topic = resample(dis);
+                T[d][j] = topic;
+                doc_topic_table[d][topic] ++;
+                topic_word_table[topic][word] ++;
+                topic_table[topic] ++;
 
             }
         }
-        double llh = this->getLogLikelihood();
-        std::cout << "Iteration "<< iter << ": " << llh << std::endl;
+        double llh = getLogLikelihood();
+        LOG("Iteration: %d, loglikelihood: %.8f, time: %.2fs\n", iter, llh, timer.get_time_elapsed());
     }
 }
 
@@ -110,20 +113,20 @@ int lda::resample(std::vector<double> multi_dis) {
 
     // normalize
     double sum = 0;
-    for(int i = 0; i < this->num_topics; i++){
-        sum += multi_dis.at(i);
+    for(int i = 0; i < num_topics; i++){
+        sum += multi_dis[i];
     }
 
 
-    double prob = this->dis(this->gen)*sum;
+    double prob = dis(gen)*sum;
 
     double accum = 0;
-    for(int i = 0; i < this->num_topics; i++){
-        accum += multi_dis.at(i);
+    for(int i = 0; i < num_topics; i++){
+        accum += multi_dis[i];
         if(prob < accum)
             return i;
     }
-    return this->num_topics - 1;
+    return num_topics - 1;
 
 }
 
@@ -145,25 +148,25 @@ double lda::logDirichlet(double x, int N) {
 double lda::getLogLikelihood() {
     double lik = 0.0;
 
-    double* temp = new double[this->vocab_size];
-    for(int k = 0; k < this->num_topics; k++){
-        int* word_vector = this->topic_word_table[k];
-        for(int w = 0; w < this->vocab_size; w++){
-            temp[w] = word_vector[w] + this->beta;
+    double* temp = new double[vocab_size];
+    for(int k = 0; k < num_topics; k++){
+        int* word_vector = topic_word_table[k];
+        for(int w = 0; w < vocab_size; w++){
+            temp[w] = word_vector[w] + beta;
         }
-        lik += this->logDirichlet(temp, this->vocab_size);
-        lik -= this->logDirichlet(this->beta, this->vocab_size);
+        lik += logDirichlet(temp, vocab_size);
+        lik -= logDirichlet(beta, vocab_size);
     }
     delete[] temp;
 
-    temp = new double[this->num_topics];
-    for(int d = 0; d < this->num_docs; d++){
-        int* topic_vector = this->doc_topic_table[d];
-        for(int k = 0; k < this->num_topics; k++){
-            temp[k] = topic_vector[k] + this->alpha;
+    temp = new double[num_topics];
+    for(int d = 0; d < num_docs; d++){
+        int* topic_vector = doc_topic_table[d];
+        for(int k = 0; k < num_topics; k++){
+            temp[k] = topic_vector[k] + alpha;
         }
-        lik += this->logDirichlet(temp, this->num_topics);
-        lik -= this->logDirichlet(this->alpha, this->num_topics);
+        lik += logDirichlet(temp, num_topics);
+        lik -= logDirichlet(alpha, num_topics);
     }
     delete[] temp;
 
@@ -171,24 +174,24 @@ double lda::getLogLikelihood() {
 }
 
 void lda::printTopicWord() {
-    std::string fileName = "Output/" + this->output + ".tw";
+    std::string fileName = "output/" + output + ".tw";
     std::ofstream out_file(fileName);
-    for(int k = 0; k < this->num_topics; k++){
-        for(int w = 0; w < this->vocab_size - 1; w++){
-            out_file << this->topic_word_table[k][w] << ",";
+    for(int k = 0; k < num_topics; k++){
+        for(int w = 0; w < vocab_size - 1; w++){
+            out_file << topic_word_table[k][w] << ",";
         }
-        out_file << this->topic_word_table[k][this->vocab_size - 1] << "\n";
+        out_file << topic_word_table[k][vocab_size - 1] << "\n";
     }
 }
 
 void lda::printDocTopic() {
-    std::string fileName = "Output/" + this->output + ".dt";
+    std::string fileName = "output/" + output + ".dt";
     std::ofstream out_file(fileName);
-    for(int d = 0; d < this->num_docs; d++){
-        for(int k = 0; k < this->num_topics - 1; k++){
-            out_file << this->doc_topic_table[d][k] << ",";
+    for(int d = 0; d < num_docs; d++){
+        for(int k = 0; k < num_topics - 1; k++){
+            out_file << doc_topic_table[d][k] << ",";
         }
-        out_file << this->doc_topic_table[d][this->num_topics - 1] << "\n";
+        out_file << doc_topic_table[d][num_topics - 1] << "\n";
     }
 
 }

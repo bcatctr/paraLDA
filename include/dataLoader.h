@@ -2,8 +2,8 @@
 // Created by CHEN HU on 4/23/17.
 //
 
-#ifndef LDA_DATALOADER_H
-#define LDA_DATALOADER_H
+#ifndef PARALDA_DATALOADER_H
+#define PARALDA_DATALOADER_H
 
 
 #include <string>
@@ -22,7 +22,7 @@ public:
 
     int docsCount();
 
-    int volcabSize();
+    int vocabSize();
 
     std::vector<std::string> loadDict();
 
@@ -31,4 +31,4 @@ public:
 };
 
 
-#endif //LDA_DATALOADER_H
+#endif //PARALDA_DATALOADER_H

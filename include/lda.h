@@ -2,8 +2,8 @@
 // Created by CHEN HU on 4/23/17.
 //
 
-#ifndef LDA_LDA_H
-#define LDA_LDA_H
+#ifndef PARALDA_LDA_H
+#define PARALDA_LDA_H
 
 
 #include <string>

@@ -1,12 +1,12 @@
 SRC 	= ./src
 OBJ 	= ./obj
 BIN 	= ./bin
-FILES 	= dataLoader.cpp lda.cpp main.cpp
+FILES 	= dataLoader.cpp lda.cpp main.cpp Log.cpp
 INCLUDE = ./include
 SOURCES = $(patsubst %,$(SRC)/%,$(FILES))
 OBJECTS = $(patsubst %.cpp,$(OBJ)/%.o,$(FILES))
 
-TARGET 	= $(BIN)/main
+TARGET 	= $(BIN)/paraLDA
 
 CXX  	= g++
 COPT 	= -O3
@@ -18,7 +18,8 @@ MKDIR_P = @mkdir -p
 all: $(TARGET)
 
 run: $(TARGET)
-	@$(TARGET) parameter.txt
+	$(MKDIR_P) output
+	@$(TARGET) parameters.txt
 
 $(OBJ)/%.o: $(SRC)/%.cpp
 	$(MKDIR_P) $(OBJ)
