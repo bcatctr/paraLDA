@@ -88,7 +88,6 @@ void lda::initialize() {
             local_topic_table[topic] ++;
         }
     }
-
 }
 
 
@@ -118,6 +117,7 @@ void lda::runGibbs() {
 
     CycleTimer timer;
     for(int iter = 0; iter < num_iterations; iter++){
+        reduce_tables();
         for(int d = 0; d < (int) W.size(); d++){
             for(int j = 0; j < (int) W[d].size(); j++){
                 int word = W[d][j];
@@ -127,7 +127,8 @@ void lda::runGibbs() {
                 local_topic_word_table[topic][word] --;
                 local_topic_table[topic] --;
 
-                reduce_tables();
+                global_topic_word_table[topic][word] --;
+                global_topic_table[topic]--;
 
                 // recalculate topic distribution
                 for(int k = 0; k < num_topics; k++) {
@@ -148,7 +149,7 @@ void lda::runGibbs() {
         double global_llh = 0;
         MPI_Allreduce(&llh, &global_llh, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
-        LOG("Iteration: %d, loglikelihood: %.8f, time: %.2fs\n", iter, llh, timer.get_time_elapsed());
+        LOG("Iteration: %d, loglikelihood: %.8f, time: %.2fs\n", iter, global_llh, timer.get_time_elapsed());
     }
 }
 

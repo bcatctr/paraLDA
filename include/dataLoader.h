@@ -11,7 +11,6 @@
 
 class dataLoader {
 
-    std::string dataFile;
     std::vector<std::string> dict;
     std::vector<std::vector<int>> corpus;
 

@@ -2,16 +2,16 @@ SRC 	= ./src
 OBJ 	= ./obj
 BIN 	= ./bin
 FILES 	= dataLoader.cpp lda.cpp main.cpp Log.cpp
-INCLUDE = ./include
+INCLUDE = -I./include 
 SOURCES = $(patsubst %,$(SRC)/%,$(FILES))
 OBJECTS = $(patsubst %.cpp,$(OBJ)/%.o,$(FILES))
 
 TARGET 	= $(BIN)/paraLDA
 
-CXX  	= g++
+CXX  	= mpic++
 COPT 	= -O3
-CFLAGS  = -I $(INCLUDE) -std=c++11 -g -Wall -Werror -Wextra -Wno-unused-function -Wno-unused-parameter $(COPT)
-LDFLAGS =
+CFLAGS  = $(INCLUDE) -std=c++11 -g -Wall -Werror -Wextra -Wno-unused-function -Wno-unused-parameter $(COPT)
+LDFLAGS = -lmpi
 
 MKDIR_P = @mkdir -p
 

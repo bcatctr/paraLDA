@@ -24,6 +24,7 @@ dataLoader::dataLoader(std::string dataDir, int rank, int comm_size) {
         }
     }
 
+    LOG("dictionary size: %d\n", this->dict.size());
     LOG("finish loading dictionary, %.2fs\n", timer.get_time_elapsed());
 
     LOG("start loading data: %s\n", dataFile.c_str());
@@ -40,7 +41,9 @@ dataLoader::dataLoader(std::string dataDir, int rank, int comm_size) {
 
         this->corpus.push_back(doc);
     }
+    data_file.close();
 
+    LOG("data size: %d\n", this->corpus.size());
     LOG("finish loading data, %.2fs\n", timer.get_time_elapsed());
 
 }
