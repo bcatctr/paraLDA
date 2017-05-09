@@ -1,0 +1,8 @@
+bin/
+obj/
+data/
+tool/
+cmake-build-debug/
+CMakeLists.txt
+.idea/
+output/
