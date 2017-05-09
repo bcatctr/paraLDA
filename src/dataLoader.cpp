@@ -8,7 +8,7 @@
 #include <fstream>
 #include <sstream>
 
-dataLoader::dataLoader(std::string dataDir) {
+dataLoader::dataLoader(std::string dataDir, int rank, int comm_size) {
     std::string dictFile = dataDir + ".dict";
     std::string dataFile = dataDir + ".data";
 
@@ -17,8 +17,11 @@ dataLoader::dataLoader(std::string dataDir) {
     LOG("start loading dictionary: %s\n", dictFile.c_str());
     std::ifstream dict_file(dictFile);
     std::string line;
+    int line_idx = 0;
     while(std::getline(dict_file, line)){
-        this->dict.push_back(line);
+        if (line_idx++ % comm_size == rank) {
+            this->dict.push_back(line);
+        }
     }
 
     LOG("finish loading dictionary, %.2fs\n", timer.get_time_elapsed());

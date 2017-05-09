@@ -8,24 +8,41 @@
 #include <Log.h>
 #include "lda.h"
 #include "CycleTimer.h"
+#include "mpi.h"
 
 
-lda::lda(std::string dataDir, std::string output, int num_topics, double alpha, double beta, int num_iterations)
+lda::lda(std::string dataDir, std::string output, int num_topics,
+         double alpha, double beta, int num_iterations, int rank, int comm_size)
         : gen(std::random_device()()), dis(0, 1) {
+    this->rank = rank;
+    this->comm_size = comm_size;
     this->num_topics = num_topics;
     this->alpha = alpha;
     this->beta = beta;
     this->num_iterations = num_iterations;
-    this->data_loader = new dataLoader(dataDir);
+    this->data_loader = new dataLoader(dataDir, rank, comm_size);
     this->output = output;
 
     num_docs = data_loader->docsCount();
     vocab_size = data_loader->vocabSize();
 
-    topic_table = new int[num_topics]();
-    topic_word_table = new int*[num_topics];
-    for(int i = 0; i < num_topics; i++)
-        topic_word_table[i] = new int[vocab_size]();
+    memory_size = num_topics * vocab_size + num_topics;
+
+    local_table_memory = new int[memory_size];
+    global_table_memory = new int[memory_size];
+
+    local_topic_table = local_table_memory + num_topics * vocab_size;
+    global_topic_table = global_table_memory + num_topics * vocab_size;
+
+    local_topic_word_table = new int*[num_topics];
+    global_topic_word_table = new int*[num_topics];
+    int j = 0;
+    for(int i = 0; i < num_topics; i++) {
+        local_topic_word_table[i] = local_table_memory + j;
+        global_topic_word_table[i] = global_table_memory + j;
+        j += vocab_size;
+    }
+
 
     doc_topic_table = new int*[num_docs];
     for(int i = 0; i < num_docs; i++)
@@ -42,11 +59,12 @@ lda::lda(std::string dataDir, std::string output, int num_topics, double alpha, 
 
 lda::~lda() {
     delete data_loader;
-    delete[] topic_table;
 
-    for(int i = 0; i < num_topics; i++)
-        delete[] topic_word_table[i];
-    delete[] topic_word_table;
+    delete[] global_table_memory;
+    delete[] local_table_memory;
+
+    delete[] global_topic_word_table;
+    delete[] local_topic_word_table;
 
     for(int i = 0; i < num_docs; i++)
         delete[] doc_topic_table[i];
@@ -66,11 +84,30 @@ void lda::initialize() {
             int topic = int_dis(int_gen);
             T[d][j] = topic;
             doc_topic_table[d][topic] ++;
-            topic_word_table[topic][word] ++;
-            topic_table[topic] ++;
+            local_topic_word_table[topic][word] ++;
+            local_topic_table[topic] ++;
         }
     }
 
+}
+
+
+void lda::reduce_tables() {
+    int block_size = 1 << 23;
+    if (memory_size <= block_size) {
+        MPI_Allreduce(local_table_memory, global_table_memory, memory_size, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+    }
+    else {
+        int j = 0;
+        for (; j+block_size<=memory_size; j+=block_size) {
+            MPI_Allreduce(local_table_memory + j, global_table_memory + j,
+                          block_size, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+        }
+        if (j < memory_size) {
+            MPI_Allreduce(local_table_memory + j, global_table_memory + j,
+                          memory_size - j, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+        }
+    }
 }
 
 
@@ -87,23 +124,30 @@ void lda::runGibbs() {
                 int topic = T[d][j];
                 // ignore current position
                 doc_topic_table[d][topic] --;
-                topic_word_table[topic][word] --;
-                topic_table[topic] --;
+                local_topic_word_table[topic][word] --;
+                local_topic_table[topic] --;
+
+                reduce_tables();
 
                 // recalculate topic distribution
                 for(int k = 0; k < num_topics; k++) {
-                    dis[k] = (topic_word_table[k][word] + beta) / (topic_table[k] + beta * vocab_size) * (doc_topic_table[d][k] + alpha);
+                    dis[k] = (global_topic_word_table[k][word] + beta) / (global_topic_table[k] + beta * vocab_size) * (doc_topic_table[d][k] + alpha);
                 }
 
                 topic = resample(dis);
                 T[d][j] = topic;
                 doc_topic_table[d][topic] ++;
-                topic_word_table[topic][word] ++;
-                topic_table[topic] ++;
+                local_topic_word_table[topic][word] ++;
+                local_topic_table[topic] ++;
 
+                global_topic_word_table[topic][word] ++;
+                global_topic_table[topic]++;
             }
         }
         double llh = getLogLikelihood();
+        double global_llh = 0;
+        MPI_Allreduce(&llh, &global_llh, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
         LOG("Iteration: %d, loglikelihood: %.8f, time: %.2fs\n", iter, llh, timer.get_time_elapsed());
     }
 }
@@ -150,7 +194,7 @@ double lda::getLogLikelihood() {
 
     double* temp = new double[vocab_size];
     for(int k = 0; k < num_topics; k++){
-        int* word_vector = topic_word_table[k];
+        int* word_vector = global_topic_word_table[k];
         for(int w = 0; w < vocab_size; w++){
             temp[w] = word_vector[w] + beta;
         }
@@ -178,9 +222,9 @@ void lda::printTopicWord() {
     std::ofstream out_file(fileName);
     for(int k = 0; k < num_topics; k++){
         for(int w = 0; w < vocab_size - 1; w++){
-            out_file << topic_word_table[k][w] << ",";
+            out_file << global_topic_word_table[k][w] << ",";
         }
-        out_file << topic_word_table[k][vocab_size - 1] << "\n";
+        out_file << global_topic_word_table[k][vocab_size - 1] << "\n";
     }
 }
 
