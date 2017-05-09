@@ -19,9 +19,7 @@ dataLoader::dataLoader(std::string dataDir, int rank, int comm_size) {
     std::string line;
     int line_idx = 0;
     while(std::getline(dict_file, line)){
-        if (line_idx++ % comm_size == rank) {
             this->dict.push_back(line);
-        }
     }
 
     LOG("dictionary size: %d\n", this->dict.size());
@@ -31,15 +29,17 @@ dataLoader::dataLoader(std::string dataDir, int rank, int comm_size) {
 
     std::ifstream data_file(dataFile);
     while(std::getline(data_file, line)){
-        std::vector<int> doc;
-        std::stringstream ss(line);
-        std::string tok;
+        if (line_idx++ % comm_size == rank) {
+            std::vector<int> doc;
+            std::stringstream ss(line);
+            std::string tok;
 
-        while(std::getline(ss, tok, ',')){
-            doc.push_back(std::stoi(tok));
+            while(std::getline(ss, tok, ',')){
+                doc.push_back(std::stoi(tok));
+            }
+
+            this->corpus.push_back(doc);
         }
-
-        this->corpus.push_back(doc);
     }
     data_file.close();
 

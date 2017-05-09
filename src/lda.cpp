@@ -42,7 +42,8 @@ lda::lda(std::string dataDir, std::string output, int num_topics,
         global_topic_word_table[i] = global_table_memory + j;
         j += vocab_size;
     }
-
+    memset(local_table_memory, 0, sizeof(int) * memory_size);
+    memset(global_table_memory, 0, sizeof(int) * memory_size);
 
     doc_topic_table = new int*[num_docs];
     for(int i = 0; i < num_docs; i++)
@@ -55,6 +56,10 @@ lda::lda(std::string dataDir, std::string output, int num_topics,
         std::vector<int> temp(W[i].size(), -1);
         T[i] = temp;
     }
+
+    vocab_temp = new double[vocab_size];
+    topic_temp = new double[num_topics];
+
 }
 
 lda::~lda() {
@@ -69,6 +74,9 @@ lda::~lda() {
     for(int i = 0; i < num_docs; i++)
         delete[] doc_topic_table[i];
     delete[] doc_topic_table;
+
+    delete[] vocab_temp;
+    delete[] topic_temp;
 
     T.clear();
 }
@@ -92,6 +100,7 @@ void lda::initialize() {
 
 
 void lda::reduce_tables() {
+    memset(global_table_memory, 0, sizeof(int) * memory_size);
     int block_size = 1 << 23;
     if (memory_size <= block_size) {
         MPI_Allreduce(local_table_memory, global_table_memory, memory_size, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
@@ -114,7 +123,6 @@ void lda::runGibbs() {
 
     initialize();
     std::vector<double> dis((size_t)num_topics, 0);
-
     CycleTimer timer;
     for(int iter = 0; iter < num_iterations; iter++){
         reduce_tables();
@@ -145,11 +153,15 @@ void lda::runGibbs() {
                 global_topic_table[topic]++;
             }
         }
-        double llh = getLogLikelihood();
+        double llh = getLocalLogLikelihood();
+
         double global_llh = 0;
         MPI_Allreduce(&llh, &global_llh, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
-        LOG("Iteration: %d, loglikelihood: %.8f, time: %.2fs\n", iter, global_llh, timer.get_time_elapsed());
+        if (rank == 0) {
+            global_llh += getGlobalLogLikelihood();
+            LOG("Iteration: %d, loglikelihood: %.8f, time: %.2fs\n", iter, global_llh, timer.get_time_elapsed());
+        }
     }
 }
 
@@ -190,30 +202,31 @@ double lda::logDirichlet(double x, int N) {
     return N * std::lgamma(x) - std::lgamma(N * x);
 }
 
-double lda::getLogLikelihood() {
+double lda::getGlobalLogLikelihood() {
     double lik = 0.0;
-
-    double* temp = new double[vocab_size];
     for(int k = 0; k < num_topics; k++){
         int* word_vector = global_topic_word_table[k];
         for(int w = 0; w < vocab_size; w++){
-            temp[w] = word_vector[w] + beta;
+            vocab_temp[w] = word_vector[w] + beta;
         }
-        lik += logDirichlet(temp, vocab_size);
+        lik += logDirichlet(vocab_temp, vocab_size);
         lik -= logDirichlet(beta, vocab_size);
     }
-    delete[] temp;
+    return lik;
+}
 
-    temp = new double[num_topics];
+double lda::getLocalLogLikelihood() {
+    double lik = 0.0;
+
+
     for(int d = 0; d < num_docs; d++){
         int* topic_vector = doc_topic_table[d];
         for(int k = 0; k < num_topics; k++){
-            temp[k] = topic_vector[k] + alpha;
+            topic_temp[k] = topic_vector[k] + alpha;
         }
-        lik += logDirichlet(temp, num_topics);
+        lik += logDirichlet(topic_temp, num_topics);
         lik -= logDirichlet(alpha, num_topics);
     }
-    delete[] temp;
 
     return lik;
 }

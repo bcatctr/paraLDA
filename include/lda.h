@@ -31,6 +31,9 @@ class lda {
     std::vector<std::vector<int>> T;
     std::string output;
 
+    double* vocab_temp;
+    double* topic_temp;
+
     int rank;
     int comm_size;
 
@@ -48,7 +51,8 @@ public:
     void initialize();
     void runGibbs();
     int resample(std::vector<double> dis);
-    double getLogLikelihood();
+    double getLocalLogLikelihood();
+    double getGlobalLogLikelihood();
     double logDirichlet(double* X, int N);
     double logDirichlet(double x, int N);
     void printTopicWord();
