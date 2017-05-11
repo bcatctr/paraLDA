@@ -8,7 +8,7 @@
 #include <fstream>
 #include <sstream>
 
-dataLoader::dataLoader(std::string dataDir, int rank, int comm_size) {
+dataLoader::dataLoader(std::string dataDir, int rank, int comm_size, int master_count) {
     std::string dictFile = dataDir + ".dict";
     std::string dataFile = dataDir + ".data";
 
@@ -17,16 +17,20 @@ dataLoader::dataLoader(std::string dataDir, int rank, int comm_size) {
     LOG("start loading dictionary: %s\n", dictFile.c_str());
     std::ifstream dict_file(dictFile);
     std::string line;
-    int line_idx = 0;
     while(std::getline(dict_file, line)){
-            this->dict.push_back(line);
+        this->dict.push_back(line);
     }
-
     LOG("dictionary size: %d\n", this->dict.size());
     LOG("finish loading dictionary, %.2fs\n", timer.get_time_elapsed());
 
+    if (rank < master_count) return;
+
     LOG("start loading data: %s\n", dataFile.c_str());
 
+    comm_size -= master_count;
+    rank -= master_count;
+
+    int line_idx = 0;
     std::ifstream data_file(dataFile);
     while(std::getline(data_file, line)){
         if (line_idx++ % comm_size == rank) {

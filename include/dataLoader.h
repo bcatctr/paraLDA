@@ -15,7 +15,7 @@ class dataLoader {
     std::vector<std::vector<int>> corpus;
 
 public:
-    dataLoader(std::string dataDir, int rank, int comm_size);
+    dataLoader(std::string dataDir, int rank, int comm_size, int master_count);
 
     ~dataLoader();
 

@@ -1,10 +1,10 @@
 #include <iostream>
 #include <unordered_map>
 #include <fstream>
+#include "Master.h"
 #include "lda.h"
 #include "Log.h"
 #include "CycleTimer.h"
-#include "mpi.h"
 
 std::unordered_map<std::string, std::string> parseArg(char *fileName);
 
@@ -27,22 +27,36 @@ int main(int argc, char *argv[]) {
         OPEN_LOG("");
     }
 
+    int master_count = std::stoi(paras["masterCount"]);
+
     CycleTimer timer;
     LOG("start main\n");
 
-    lda my_lda(paras["dataPath"],
-               paras["outputFile"],
-               std::stoi(paras["numTopics"]),
-               std::stod(paras["alpha"]),
-               std::stod(paras["beta"]),
-               std::stoi(paras["numIterations"]),
-               rank,
-               comm_size);
-    my_lda.runGibbs();
+    if (rank < master_count) {
+        // run worker
+        lda my_lda(paras["dataPath"],
+                   paras["outputFile"],
+                   std::stoi(paras["numTopics"]),
+                   std::stod(paras["alpha"]),
+                   std::stod(paras["beta"]),
+                   std::stoi(paras["numIterations"]),
+                   rank,
+                   comm_size,
+                   master_count);
+        my_lda.runGibbs();
 
-    if (rank == 0) {
-        my_lda.printTopicWord();
-        my_lda.printDocTopic();
+        if (rank == master_count) {
+            my_lda.printTopicWord();
+            my_lda.printDocTopic();
+        }
+    }
+    else {
+        // run master
+        dataLoader d(paras["dataPath"], rank, comm_size, master_count);
+        int num_topics = std::stoi(paras["numTopics"]);
+        int length = num_topics * d.vocabSize() + num_topics;
+        Master master(length);
+        master.run();
     }
 
     LOG("finish main, %.2fs\n", timer.get_time_elapsed());
