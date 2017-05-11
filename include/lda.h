@@ -8,6 +8,8 @@
 
 #include <string>
 #include <vector>
+#include <map>
+#include <unordered_map>
 #include <random>
 #include "dataLoader.h"
 
@@ -26,7 +28,7 @@ class lda {
     int* global_topic_table;
     int** local_word_topic_table;
     int** global_word_topic_table;
-    int** doc_topic_table;
+    std::vector<std::unordered_map<int, int>> doc_topic_table;
     std::vector<std::vector<int>> W;
     std::vector<std::vector<int>> T;
     std::string output;

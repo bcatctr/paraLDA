@@ -45,9 +45,12 @@ lda::lda(std::string dataDir, std::string output, int num_topics,
     memset(local_table_memory, 0, sizeof(int) * memory_size);
     memset(global_table_memory, 0, sizeof(int) * memory_size);
 
-    doc_topic_table = new int*[num_docs];
-    for(int i = 0; i < num_docs; i++)
-        doc_topic_table[i] = new int[num_topics]();
+    doc_topic_table.resize(num_docs);
+    for(int i = 0; i < num_docs; i++){
+        std::unordered_map<int, int> temp;
+        doc_topic_table[i] = temp;
+    }
+
 
     W = data_loader->loadCorpus();
 
@@ -71,9 +74,7 @@ lda::~lda() {
     delete[] global_word_topic_table;
     delete[] local_word_topic_table;
 
-    for(int i = 0; i < num_docs; i++)
-        delete[] doc_topic_table[i];
-    delete[] doc_topic_table;
+    doc_topic_table.clear();
 
     delete[] vocab_temp;
     delete[] topic_temp;
@@ -147,7 +148,16 @@ void lda::runGibbs() {
             // calculate "doc-topic" bucket F and coefficient c
             F = 0;
             std::fill(f.begin(),f.end(),0);
-            int* curr_doc = doc_topic_table[d];
+            std::unordered_map<int, int> curr_doc = doc_topic_table[d];
+            for(int k = 0; k < num_topics; k++){
+                c[k] = (curr_doc[k] + alpha) / (global_topic_table[k] + beta * vocab_size);
+            }
+            for(auto const &ent : curr_doc){
+                f[ent.first] = (beta * ent.second) / (global_topic_table[ent.first] + beta * vocab_size);
+                F += f[ent.first];
+            }
+
+            /*
             for(int k = 0; k < num_topics ; k++){
                 denominator = global_topic_table[k] + beta * vocab_size;
                 c[k] = (curr_doc[k] + alpha) / denominator;
@@ -155,7 +165,7 @@ void lda::runGibbs() {
 
                 f[k] = (beta * curr_doc[k]) / denominator;
                 F += f[k];
-            }
+            }*/
 
             // sample a new topic for each word of the document
             for(int j = 0; j < (int) W[d].size(); j++){
@@ -304,7 +314,7 @@ double lda::getLocalLogLikelihood() {
 
 
     for(int d = 0; d < num_docs; d++){
-        int* topic_vector = doc_topic_table[d];
+        std::unordered_map<int, int> topic_vector = doc_topic_table[d];
         for(int k = 0; k < num_topics; k++){
             topic_temp[k] = topic_vector[k] + alpha;
         }

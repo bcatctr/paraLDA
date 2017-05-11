@@ -30,6 +30,7 @@ int main(int argc, char *argv[]) {
     CycleTimer timer;
     LOG("start main\n");
 
+
     lda my_lda(paras["dataPath"],
                paras["outputFile"],
                std::stoi(paras["numTopics"]),
