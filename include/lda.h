@@ -17,7 +17,8 @@ class lda {
     int vocab_size;
     double alpha;
     double beta;
-    int num_iterations;
+    int max_iterations;
+    double threshold;
     dataLoader* data_loader;
     int memory_size;
     int* local_table_memory;
@@ -46,7 +47,7 @@ class lda {
 
 public:
     lda(std::string dataFile, std::string output, int num_topics,
-        double alpha, double beta, int num_iterations, int rank, int comm_size);
+        double alpha, double beta, int max_iterations, int rank, int comm_size, double threshold);
     ~lda();
     void initialize();
     void runGibbs();

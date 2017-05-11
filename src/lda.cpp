@@ -12,14 +12,15 @@
 
 
 lda::lda(std::string dataDir, std::string output, int num_topics,
-         double alpha, double beta, int num_iterations, int rank, int comm_size)
+         double alpha, double beta, int max_iterations, int rank, int comm_size, double threshold)
         : gen(std::random_device()()), dis(0, 1) {
     this->rank = rank;
     this->comm_size = comm_size;
     this->num_topics = num_topics;
     this->alpha = alpha;
     this->beta = beta;
-    this->num_iterations = num_iterations;
+    this->max_iterations = max_iterations;
+    this->threshold = threshold;
     this->data_loader = new dataLoader(dataDir, rank, comm_size);
     this->output = output;
 
@@ -129,7 +130,10 @@ void lda::runGibbs() {
     std::vector<double> g((size_t)num_topics, 0);
     std::vector<double> e((size_t)num_topics, 0);
     double F,G,E,Q;
+    bool flag = true;
+    double old_llh = 0;
     double denominator;
+
 
     CycleTimer timer;
     // pre-calculate G and g because they are irrelevant with document
@@ -139,7 +143,7 @@ void lda::runGibbs() {
         G += g[k];
     }
 
-    for(int iter = 0; iter < num_iterations; iter++){
+    for(int iter = 0; flag && iter < max_iterations; iter++){
 
         for(int d = 0; d < (int) W.size(); d++){
             // calculate coefficient c which can be updated topic by topic in iterations by word
@@ -224,16 +228,23 @@ void lda::runGibbs() {
             }
 
         }
+        reduce_tables();
+
         double llh = getLocalLogLikelihood();
 
         double global_llh = 0;
         MPI_Allreduce(&llh, &global_llh, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
+        global_llh += getGlobalLogLikelihood();
+
         if (rank == 0) {
-            global_llh += getGlobalLogLikelihood();
             LOG("Iteration: %d, loglikelihood: %.8f, time: %.2fs\n", iter, global_llh, timer.get_time_elapsed());
         }
-        reduce_tables();
+
+        double diff = std::abs(old_llh - global_llh) / std::abs(global_llh);
+        old_llh = global_llh;
+        flag = (diff > threshold);
+
     }
 }
 

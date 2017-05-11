@@ -35,9 +35,10 @@ int main(int argc, char *argv[]) {
                std::stoi(paras["numTopics"]),
                std::stod(paras["alpha"]),
                std::stod(paras["beta"]),
-               std::stoi(paras["numIterations"]),
+               std::stoi(paras["maxIterations"]),
                rank,
-               comm_size);
+               comm_size,
+               std::stod(paras["threshold"]));
     my_lda.runGibbs();
 
     if (rank == 0) {
