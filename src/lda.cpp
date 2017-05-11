@@ -148,7 +148,8 @@ void lda::runGibbs() {
             // calculate "doc-topic" bucket F and coefficient c
             F = 0;
             std::fill(f.begin(),f.end(),0);
-            std::unordered_map<int, int> curr_doc = doc_topic_table[d];
+            std::unordered_map<int, int>& curr_doc = doc_topic_table[d];
+
             for(int k = 0; k < num_topics; k++){
                 c[k] = (curr_doc[k] + alpha) / (global_topic_table[k] + beta * vocab_size);
             }
@@ -314,7 +315,7 @@ double lda::getLocalLogLikelihood() {
 
 
     for(int d = 0; d < num_docs; d++){
-        std::unordered_map<int, int> topic_vector = doc_topic_table[d];
+        std::unordered_map<int, int>& topic_vector = doc_topic_table[d];
         for(int k = 0; k < num_topics; k++){
             topic_temp[k] = topic_vector[k] + alpha;
         }
