@@ -24,8 +24,8 @@ class lda {
     int* global_table_memory;
     int* local_topic_table;
     int* global_topic_table;
-    int** local_topic_word_table;
-    int** global_topic_word_table;
+    int** local_word_topic_table;
+    int** global_word_topic_table;
     int** doc_topic_table;
     std::vector<std::vector<int>> W;
     std::vector<std::vector<int>> T;
@@ -50,7 +50,8 @@ public:
     ~lda();
     void initialize();
     void runGibbs();
-    int resample(std::vector<double> dis);
+    int resample(std::vector<double> multi_dis);
+    int resample(std::vector<double> multi_dis, double prob);
     double getLocalLogLikelihood();
     double getGlobalLogLikelihood();
     double logDirichlet(double* X, int N);
