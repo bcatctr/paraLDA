@@ -124,7 +124,6 @@ void lda::reduce_tables() {
 void lda::runGibbs() {
 
     initialize();
-
     std::vector<double> c((size_t)num_topics, 0);
     std::vector<double> f((size_t)num_topics, 0);
     std::vector<double> g((size_t)num_topics, 0);
@@ -149,24 +148,24 @@ void lda::runGibbs() {
             F = 0;
             std::fill(f.begin(),f.end(),0);
             std::unordered_map<int, int>& curr_doc = doc_topic_table[d];
-
+            /*
             for(int k = 0; k < num_topics; k++){
                 c[k] = (curr_doc[k] + alpha) / (global_topic_table[k] + beta * vocab_size);
             }
             for(auto const &ent : curr_doc){
                 f[ent.first] = (beta * ent.second) / (global_topic_table[ent.first] + beta * vocab_size);
                 F += f[ent.first];
-            }
+            }*/
 
-            /*
+
             for(int k = 0; k < num_topics ; k++){
                 denominator = global_topic_table[k] + beta * vocab_size;
                 c[k] = (curr_doc[k] + alpha) / denominator;
-                if(curr_doc[k] == 0) continue;
+                if(curr_doc.count(k) == 0) continue;
 
                 f[k] = (beta * curr_doc[k]) / denominator;
                 F += f[k];
-            }*/
+            }
 
             // sample a new topic for each word of the document
             for(int j = 0; j < (int) W[d].size(); j++){
@@ -281,6 +280,16 @@ int lda::resample(std::vector<double> multi_dis, double prob) {
     }
     return num_topics - 1;
 
+}
+
+int lda::resample(std::unordered_map<int, double> multi_dis, double prob) {
+    double accum = 0;
+    for(auto const& ent : multi_dis){
+        accum += ent.second;
+        if(prob < accum)
+            return  ent.first;
+    }
+    return num_topics - 1;
 }
 
 double lda::logDirichlet(double *X, int N) {

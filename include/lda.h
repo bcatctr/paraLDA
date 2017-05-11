@@ -54,6 +54,7 @@ public:
     void runGibbs();
     int resample(std::vector<double> multi_dis);
     int resample(std::vector<double> multi_dis, double prob);
+    int resample(std::unordered_map<int,double> multi_dis, double prob);
     double getLocalLogLikelihood();
     double getGlobalLogLikelihood();
     double logDirichlet(double* X, int N);
