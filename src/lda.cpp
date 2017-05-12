@@ -96,6 +96,7 @@ void lda::initialize() {
             local_topic_table[topic] ++;
         }
     }
+    reduce_tables();
 }
 
 
@@ -123,9 +124,20 @@ void lda::runGibbs() {
 
     initialize();
     std::vector<double> dis((size_t)num_topics, 0);
+    double old_llh = 0;
+    double elapsed_time = 0;
+    double iteration_time = 0;
+
+    //precompute the likelihood
+    double llh = getLocalLogLikelihood();
+    MPI_Allreduce(&llh, &old_llh, 1, MPI_DOUBLE, MPI_SUM,MPI_COMM_WORLD);
+    old_llh += getGlobalLogLikelihood();
+
+
     CycleTimer timer;
     for(int iter = 0; iter < num_iterations; iter++){
-        reduce_tables();
+        
+        CycleTimer iter_timer;
         for(int d = 0; d < (int) W.size(); d++){
             for(int j = 0; j < (int) W[d].size(); j++){
                 int word = W[d][j];
@@ -153,14 +165,24 @@ void lda::runGibbs() {
                 global_topic_table[topic]++;
             }
         }
-        double llh = getLocalLogLikelihood();
+        reduce_tables();
+
+
+        iteration_time = iter_timer.get_time_elapsed();
+        elapsed_time += iteration_time;
+
+
+        llh = getLocalLogLikelihood();
 
         double global_llh = 0;
         MPI_Allreduce(&llh, &global_llh, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        global_llh += getGlobalLogLikelihood();
+
+        double diff = std::abs(old_llh - global_llh)/ std::abs(global_llh);
+        old_llh = global_llh;
 
         if (rank == 0) {
-            global_llh += getGlobalLogLikelihood();
-            LOG("Iteration: %d, loglikelihood: %.8f, time: %.2fs\n", iter, global_llh, timer.get_time_elapsed());
+            LOG("Iteration:%d\tloglikelihood:%.8f\trel_change:%.4f\ttime:%.4f\ttotal_time:%.2f\n", iter, global_llh, diff, iteration_time, elapsed_time);
         }
     }
 }
