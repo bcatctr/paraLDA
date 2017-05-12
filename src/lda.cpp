@@ -134,6 +134,12 @@ void lda::runGibbs() {
     double old_llh = 0;
     double denominator;
     double elapsed_time = 0;
+    double iteration_time = 0;
+    
+    //precompute the likelihood
+    double llh = getLocalLogLikelihood();
+    MPI_Allreduce(&llh, &old_llh, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    old_llh += getGlobalLogLikelihood();
 
 
     CycleTimer timer;
@@ -143,8 +149,9 @@ void lda::runGibbs() {
         g[k] = beta * alpha / (global_topic_table[k] + beta * vocab_size);
         G += g[k];
     }
-
-    for(int iter = 0; flag && iter < max_iterations; iter++){
+    
+    int iter = 0;
+    for(; flag && iter < max_iterations; iter++){
         
         CycleTimer iter_timer;
         for(int d = 0; d < (int) W.size(); d++){
@@ -234,25 +241,33 @@ void lda::runGibbs() {
         }
         reduce_tables();
 
-        elapsed_time += iter_timer.get_time_elapsed();
 
-        double llh = getLocalLogLikelihood();
+        iteration_time = iter_timer.get_time_elapsed();
+        elapsed_time += iteration_time;
+
+        llh = getLocalLogLikelihood();
 
         double global_llh = 0;
         MPI_Allreduce(&llh, &global_llh, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
         global_llh += getGlobalLogLikelihood();
 
-        if (rank == 0) {
-            LOG("Iteration: %d, loglikelihood: %.8f, time: %.2fs\n", iter, global_llh, timer.get_time_elapsed());
-        }
+
+        //if (rank == 0) {
+        //    LOG("Iteration: %d, loglikelihood: %.8f, time: %.2fs\n", iter, global_llh, timer.get_time_elapsed());
+        //}
 
         double diff = std::abs(old_llh - global_llh) / std::abs(global_llh);
         old_llh = global_llh;
         flag = (diff > threshold);
 
+        if(rank == 0){
+            LOG("Iteration:%d\tloglikelihood:%.8f\trel_change:%.4f\ttime:%.4f\ttotal_time:%.2f\n",iter, global_llh,diff,iteration_time,\
+                    elapsed_time);
+        }
+
     }
-    LOG("Rank %d Total Training time: %.2fs\n",rank,elapsed_time);
+    //LOG("Rank %d Total Training time: %.2fs, Time per iteration %f.4f\n",rank,elapsed_time,elapsed_time/iter);
 }
 
 
