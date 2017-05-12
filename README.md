@@ -1,3 +1,3 @@
 # paraLDA
 Version:
-Sparse | Sync | Converge
+No Hash | Sparse | Sync | Converge
