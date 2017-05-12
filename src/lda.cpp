@@ -13,7 +13,7 @@
 
 
 lda::lda(std::string dataDir, std::string output, int num_topics,
-         double alpha, double beta, int num_iterations, int rank, int comm_size, int master_count, MPI_Comm MPI_COMM_WORKER)
+         double alpha, double beta, int max_iterations, double threshold, int rank, int comm_size, int master_count, MPI_Comm MPI_COMM_WORKER)
         : gen(std::random_device()()), dis(0, 1) {
     LOG("start init lda\n");
     this->rank = rank;
@@ -22,7 +22,8 @@ lda::lda(std::string dataDir, std::string output, int num_topics,
     this->num_topics = num_topics;
     this->alpha = alpha;
     this->beta = beta;
-    this->num_iterations = num_iterations;
+    this->max_iterations = max_iterations;
+    this->threshold = threshold;
     this->data_loader = new dataLoader(dataDir, rank, comm_size, master_count);
     this->output = output;
     this->MPI_COMM_WORKER = MPI_COMM_WORKER;
@@ -223,6 +224,17 @@ void lda::runGibbs() {
     g.resize((size_t)num_topics, 0);
     e.resize((size_t)num_topics, 0);
 
+    bool flag = true;
+    double elapsed_time = 0;
+    double iteration_time = 0;
+    double old_llh = 0;
+
+    //precompute the likelihood
+    double llh = getLocalLogLikelihood();
+    MPI_Allreduce(&llh, &old_llh, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORKER);
+    old_llh += getGlobalLogLikelihood();
+
+
     CycleTimer timer;
 
     // blocking communication only once
@@ -238,7 +250,9 @@ void lda::runGibbs() {
 
     LOG("start iterations\n");
 
-    for(int iter = 0; iter < num_iterations; iter++){
+    for(int iter = 0; flag && iter < max_iterations; iter++){
+
+        CycleTimer iter_timer;
 
         std::thread t([this]() {
             doIter();
@@ -249,15 +263,24 @@ void lda::runGibbs() {
         }
         t.join();
 
+        iteration_time = iter_timer.get_time_elapsed();
+        elapsed_time += iteration_time;
 
-        double llh = getLocalLogLikelihood();
+
+        llh = getLocalLogLikelihood();
 
         double global_llh = 0;
         MPI_Allreduce(&llh, &global_llh, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORKER);
 
+        global_llh += getGlobalLogLikelihood();
+
+        double diff = std::abs(old_llh - global_llh) / std::abs(global_llh);
+        old_llh = global_llh;
+        flag = (diff > threshold);
+
         if (rank == master_count) {
-            global_llh += getGlobalLogLikelihood();
-            LOG("Iteration: %d, loglikelihood: %.8f, time: %.2fs\n", iter, global_llh, timer.get_time_elapsed());
+
+            LOG("Iteration:%d\tloglikelihood:%.8f\trel_change:%.4f\ttime:%.4f\ttotal_time:%.2f\n", iter, global_llh, diff, iteration_time, elapsed_time);
         }
 
         if (iter != 0) {
