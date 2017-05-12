@@ -5,3 +5,4 @@ alpha:0.1
 beta:0.1
 numIterations:30
 outputFile:result
+masterCount:1

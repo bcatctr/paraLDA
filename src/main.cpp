@@ -28,11 +28,27 @@ int main(int argc, char *argv[]) {
     }
 
     int master_count = std::stoi(paras["masterCount"]);
+    LOG("master count: %d\n", master_count);
+
+    LOG("start create comm\n");
+    MPI_Group MPI_GROUP_WORLD;
+    MPI_Group MPI_GROUP_WORKER;
+    MPI_Comm MPI_COMM_WORKER;
+    int* master_ranks = new int[master_count];
+    for (int i = 0; i < master_count; ++i) {
+        master_ranks[i] = i;
+    }
+    MPI_Comm_group(MPI_COMM_WORLD, &MPI_GROUP_WORLD);
+    MPI_Group_excl(MPI_GROUP_WORLD, master_count, master_ranks, &MPI_GROUP_WORKER);
+    LOG("succes?: %d\n", MPI_Comm_create(MPI_COMM_WORLD, MPI_GROUP_WORKER, &MPI_COMM_WORKER) == MPI_SUCCESS);
+    LOG("comm worker: %d\n", MPI_COMM_WORKER);
+    delete[] master_ranks;
+    LOG("finish create comm\n");
 
     CycleTimer timer;
     LOG("start main\n");
 
-    if (rank < master_count) {
+    if (rank >= master_count) {
         // run worker
         lda my_lda(paras["dataPath"],
                    paras["outputFile"],
@@ -42,7 +58,8 @@ int main(int argc, char *argv[]) {
                    std::stoi(paras["numIterations"]),
                    rank,
                    comm_size,
-                   master_count);
+                   master_count,
+                   MPI_COMM_WORKER);
         my_lda.runGibbs();
 
         if (rank == master_count) {

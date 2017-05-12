@@ -6,14 +6,15 @@
 #include <math.h>
 #include <fstream>
 #include <Log.h>
-#include <omp.h>
+//#include <omp.h>
 #include "lda.h"
 #include "CycleTimer.h"
 
 
 lda::lda(std::string dataDir, std::string output, int num_topics,
-         double alpha, double beta, int num_iterations, int rank, int comm_size, int master_count)
+         double alpha, double beta, int num_iterations, int rank, int comm_size, int master_count, MPI_Comm MPI_COMM_WORKER)
         : gen(std::random_device()()), dis(0, 1) {
+    LOG("start init lda\n");
     this->rank = rank;
     this->comm_size = comm_size;
     this->master_count = master_count;
@@ -23,17 +24,8 @@ lda::lda(std::string dataDir, std::string output, int num_topics,
     this->num_iterations = num_iterations;
     this->data_loader = new dataLoader(dataDir, rank, comm_size, master_count);
     this->output = output;
+    this->MPI_COMM_WORKER = MPI_COMM_WORKER;
 
-    MPI_Group MPI_GROUP_WORLD;
-    MPI_Group MPI_GROUP_WORKER;
-    int* master_ranks = new int[master_count];
-    for (int i = 0; i < master_count; ++i) {
-        master_ranks[i] = i;
-    }
-    MPI_Comm_group(MPI_COMM_WORLD, &MPI_GROUP_WORLD);
-    MPI_Group_excl(MPI_GROUP_WORLD, master_count, master_ranks, &MPI_GROUP_WORKER);
-    MPI_Comm_create(MPI_COMM_WORLD, MPI_GROUP_WORKER, &MPI_COMM_WORKER);
-    delete[] master_ranks;
 
     communicator = new Communicator(master_count);
 
@@ -81,6 +73,7 @@ lda::lda(std::string dataDir, std::string output, int num_topics,
     vocab_temp = new double[vocab_size];
     topic_temp = new double[num_topics];
 
+    LOG("finish init lda\n");
 }
 
 lda::~lda() {
@@ -121,27 +114,6 @@ void lda::initialize() {
             local_topic_table[topic] ++;
         }
     }
-    reduce_tables();
-}
-
-
-void lda::reduce_tables() {
-    memset(global_table_memory, 0, sizeof(int) * memory_size);
-    int block_size = 1 << 23;
-    if (memory_size <= block_size) {
-        MPI_Allreduce(local_table_memory, global_table_memory, memory_size, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-    }
-    else {
-        int j = 0;
-        for (; j+block_size<=memory_size; j+=block_size) {
-            MPI_Allreduce(local_table_memory + j, global_table_memory + j,
-                          block_size, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-        }
-        if (j < memory_size) {
-            MPI_Allreduce(local_table_memory + j, global_table_memory + j,
-                          memory_size - j, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-        }
-    }
 }
 
 
@@ -168,19 +140,29 @@ void lda::runGibbs() {
     communicator->ISend(local_table_memory, memory_size);
     memset(local_table_memory, 0, sizeof(int) * memory_size);
     communicator->Recv(global_table_memory[current], memory_size);
-    bool recved = false;
-    int last_send = 0;
+
+    int sum = 0;
+    for (int i=0; i<vocab_size; i++) {
+        for (int j=0; j<num_topics; j++) {
+            sum += global_word_topic_table[current][i][j];
+        }
+    }
+
+    LOG("initial sum: %d\n", sum);
+
+    LOG("start iterations\n");
 
     for(int iter = 0; iter < num_iterations; iter++){
-        if (iter != 0) recved = communicator->Test();
-        if (recved) {
+        if (iter != 0) {
+            communicator->Wait();
             current = 1 - current;
-            if (last_send < iter - 1) {
-#pragma omp parallel for schedule(static, 64)
-                for (int i = 0; i < memory_size; i++) {
-                    global_table_memory[current][i] += local_table_memory[i];
+            int sum = 0;
+            for (int i=0; i<vocab_size; i++) {
+                for (int j=0; j<num_topics; j++) {
+                    sum += global_word_topic_table[current][i][j];
                 }
             }
+            LOG("iter %d sum: %d\n", iter, sum);
         }
 
         for(int d = 0; d < (int) W.size(); d++){
@@ -208,8 +190,8 @@ void lda::runGibbs() {
                 local_word_topic_table[word][topic] --;
                 local_topic_table[topic] --;
 
-                global_word_topic_table[word][topic] --;
-                global_topic_table[topic]--;
+                global_word_topic_table[current][word][topic] --;
+                global_topic_table[current][topic]--;
 
                 denominator = global_topic_table[current][topic] + beta * vocab_size;
                 F -= f[topic];
@@ -251,8 +233,8 @@ void lda::runGibbs() {
                 local_word_topic_table[word][topic] ++;
                 local_topic_table[topic] ++;
 
-                global_word_topic_table[word][topic] ++;
-                global_topic_table[topic]++;
+                global_word_topic_table[current][word][topic] ++;
+                global_topic_table[current][topic]++;
 
                 denominator = global_topic_table[current][topic] + beta * vocab_size;
                 F -= f[topic];
@@ -275,13 +257,10 @@ void lda::runGibbs() {
             global_llh += getGlobalLogLikelihood();
             LOG("Iteration: %d, loglikelihood: %.8f, time: %.2fs\n", iter, global_llh, timer.get_time_elapsed());
         }
-        if (iter == 0 || recved) {
-            recved = false;
-            communicator->ISend(local_table_memory, memory_size);
-            communicator->IRecv(global_table_memory[1 - current], memory_size);
-            last_send = iter;
-            memset(local_table_memory, 0, sizeof(int) * memory_size);
-        }
+
+        communicator->ISend(local_table_memory, memory_size);
+        communicator->IRecv(global_table_memory[1 - current], memory_size);
+        memset(local_table_memory, 0, sizeof(int) * memory_size);
     }
 
     communicator->Complete();
@@ -370,9 +349,9 @@ void lda::printTopicWord() {
     std::ofstream out_file(fileName);
     for(int w = 0; w < vocab_size; w++){
         for(int k = 0; k < num_topics - 1; k++){
-            out_file << global_word_topic_table[w][k] << ",";
+            out_file << global_word_topic_table[current][w][k] << ",";
         }
-        out_file << global_word_topic_table[w][num_topics - 1] << "\n";
+        out_file << global_word_topic_table[current][w][num_topics - 1] << "\n";
     }
 }
 

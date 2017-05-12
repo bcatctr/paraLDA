@@ -18,4 +18,9 @@ public:
 #define LOG(...) Log::log(__VA_ARGS__)
 #define CLOSE_LOG() Log::close()
 
+#define DEBUG
+#ifdef DEBUG
+#define LOG_DEBUG(...) Log::log(__VA_ARGS__)
+#endif
+
 #endif //PARALDA_LOG_H

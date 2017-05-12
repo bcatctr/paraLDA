@@ -49,12 +49,11 @@ class lda {
     std::mt19937 gen;
     std::uniform_real_distribution<double> dis;
 
-    void reduce_tables();
 
 
 public:
     lda(std::string dataFile, std::string output, int num_topics,
-        double alpha, double beta, int num_iterations, int rank, int comm_size, int master_count);
+        double alpha, double beta, int num_iterations, int rank, int comm_size, int master_count, MPI_Comm MPI_COMM_WORKER);
     ~lda();
     void initialize();
     void runGibbs();

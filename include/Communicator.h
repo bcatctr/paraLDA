@@ -5,7 +5,8 @@
 
 class Communicator {
     int master_cnt;
-    MPI_Request* req;
+    MPI_Request* reqs;
+    MPI_Status* statuses;
 
 public:
     Communicator(int _master_cnt);
@@ -15,6 +16,7 @@ public:
     void IRecv(int* buf, int length);
     void Recv(int* buf, int length);
     void Complete();
+    void Wait();
     bool Test();
 };
 
