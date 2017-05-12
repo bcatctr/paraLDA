@@ -133,33 +133,49 @@ void lda::runGibbs() {
     bool flag = true;
     double old_llh = 0;
     double denominator;
+    int threads_num = omp_thread_count();
+    Double *partial = new Double[threads_num];
 
 
     CycleTimer timer;
     // pre-calculate G and g because they are irrelevant with document
     G = 0;
+    clear_partial(partial, threads_num);
+
+#pragma omp parallel for
     for(int k = 0; k < num_topics; k++){
         g[k] = beta * alpha / (global_topic_table[k] + beta * vocab_size);
-        G += g[k];
+        int tid = omp_get_thread_num();
+        partial[tid].val += g[k];
+    }
+    for(int t = 0; t < threads_num; t++){
+        G += partial[t].val;
     }
 
     for(int iter = 0; flag && iter < max_iterations; iter++){
 
         for(int d = 0; d < (int) W.size(); d++){
-            // calculate coefficient c which can be updated topic by topic in iterations by word
 
             // calculate "doc-topic" bucket F and coefficient c
             F = 0;
             std::fill(f.begin(),f.end(),0);
+            clear_partial(partial, threads_num);
+
             int* curr_doc = doc_topic_table[d];
+#pragma omp parallel for
             for(int k = 0; k < num_topics ; k++){
                 denominator = global_topic_table[k] + beta * vocab_size;
                 c[k] = (curr_doc[k] + alpha) / denominator;
                 if(curr_doc[k] == 0) continue;
 
                 f[k] = (beta * curr_doc[k]) / denominator;
-                F += f[k];
+                int tid = omp_get_thread_num();
+                partial[tid].val += f[k];
             }
+            for(int t = 0; t < threads_num; t++){
+                F += partial[t].val;
+            }
+
 
             // sample a new topic for each word of the document
             for(int j = 0; j < (int) W[d].size(); j++){
@@ -185,11 +201,19 @@ void lda::runGibbs() {
                 // calculate ""topic-word" bucket E
                 E = 0;
                 std::fill(e.begin(),e.end(),0);
+                clear_partial(partial, threads_num);
+
                 int* curr_word = global_word_topic_table[word];
+#pragma omp parallel for
                 for(int k = 0; k < num_topics; k++) {
                     if(curr_word[k] == 0) continue;
+
                     e[k] = c[k] * curr_word[k];
-                    E += e[k];
+                    int tid = omp_get_thread_num();
+                    partial[tid].val += e[k];
+                }
+                for(int t = 0; t < threads_num; t++){
+                    E += partial[t].val;
                 }
 
 
@@ -246,6 +270,7 @@ void lda::runGibbs() {
         flag = (diff > threshold);
 
     }
+    delete[] partial;
 }
 
 
@@ -273,6 +298,7 @@ int lda::resample(std::vector<double> multi_dis) {
 int lda::resample(std::vector<double> multi_dis, double prob) {
 
     double accum = 0;
+
     for(int i = 0; i < num_topics; i++){
         if(multi_dis[i] == 0) continue;
         accum += multi_dis[i];
@@ -301,6 +327,7 @@ double lda::logDirichlet(double x, int N) {
 double lda::getGlobalLogLikelihood() {
     double lik = 0.0;
     for(int k = 0; k < num_topics; k++){
+#pragma omp parallel for
         for(int w = 0; w < vocab_size; w++){
             vocab_temp[w] = global_word_topic_table[w][k] + beta;
         }
@@ -316,6 +343,7 @@ double lda::getLocalLogLikelihood() {
 
     for(int d = 0; d < num_docs; d++){
         int* topic_vector = doc_topic_table[d];
+#pragma omp parallel for
         for(int k = 0; k < num_topics; k++){
             topic_temp[k] = topic_vector[k] + alpha;
         }

@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 #include <random>
+#include <omp.h>
 #include "dataLoader.h"
 
 class lda {
@@ -61,6 +62,26 @@ public:
     void printDocTopic();
 
 };
+
+struct Double{
+    double val;
+    double pad[7];
+};
+
+//Get the number of threads when parallel
+int omp_thread_count(){
+    int n = 0;
+#pragma omp parallel reduction(+:n)
+    n += 1;
+    return n;
+}
+
+// Clear partial sums
+inline void clear_partial(Double *partial, int T){
+    for(int i = 0;i < T;i++){
+        partial[i].val = 0;
+    }
+}
 
 
 #endif //LDA_LDA_H
