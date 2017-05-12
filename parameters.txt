@@ -1,10 +1,10 @@
 dataPath:./data/20news/20news
 #dataPath:./data/NIPS_1987-2015/NIPS_1987-2015
 #dataPath:./data/nytimes/nytimes
-numTopics:20
+numTopics:128
 alpha:0.1
 beta:0.1
-maxIterations:30
+maxIterations:100
 threshold:1e-3
 outputFile:result
 masterCount:1
