@@ -22,13 +22,15 @@ class lda {
     int num_iterations;
     dataLoader* data_loader;
     int memory_size;
-    int* local_table_memory;
+    int* local_table_memory[2];
     int* global_table_memory[2];
-    int* local_topic_table;
+    int* local_topic_table[2];
     int* global_topic_table[2];
-    int** local_word_topic_table;
+    int** local_word_topic_table[2];
     int** global_word_topic_table[2];
     int** doc_topic_table;
+    std::vector<double> f, g, e, c;
+    double denominator, F, G, Q, E;
     std::vector<std::vector<int>> W;
     std::vector<std::vector<int>> T;
     std::string output;
@@ -50,6 +52,7 @@ class lda {
     std::uniform_real_distribution<double> dis;
 
 
+    void doIter();
 
 public:
     lda(std::string dataFile, std::string output, int num_topics,

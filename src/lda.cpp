@@ -5,7 +5,8 @@
 #include <iostream>
 #include <math.h>
 #include <fstream>
-#include <Log.h>
+#include "Log.h"
+#include <thread>
 //#include <omp.h>
 #include "lda.h"
 #include "CycleTimer.h"
@@ -36,25 +37,30 @@ lda::lda(std::string dataDir, std::string output, int num_topics,
 
     current = 0;
 
-    local_table_memory = new int[memory_size];
+    local_table_memory[0] = new int[memory_size];
+    local_table_memory[1] = new int[memory_size];
     global_table_memory[0] = new int[memory_size];
     global_table_memory[1] = new int[memory_size];
 
-    local_topic_table = local_table_memory + num_topics * vocab_size;
+    local_topic_table[0] = local_table_memory[0] + num_topics * vocab_size;
+    local_topic_table[1] = local_table_memory[1] + num_topics * vocab_size;
     global_topic_table[0] = global_table_memory[0] + num_topics * vocab_size;
     global_topic_table[1] = global_table_memory[1] + num_topics * vocab_size;
 
-    local_word_topic_table = new int*[vocab_size];
+    local_word_topic_table[0] = new int*[vocab_size];
+    local_word_topic_table[1] = new int*[vocab_size];
     global_word_topic_table[0] = new int*[vocab_size];
     global_word_topic_table[1] = new int*[vocab_size];
     int j = 0;
     for(int i = 0; i < vocab_size; i++) {
-        local_word_topic_table[i] = local_table_memory + j;
+        local_word_topic_table[0][i] = local_table_memory[0] + j;
+        local_word_topic_table[1][i] = local_table_memory[1] + j;
         global_word_topic_table[0][i] = global_table_memory[0] + j;
         global_word_topic_table[1][i] = global_table_memory[1] + j;
         j += num_topics;
     }
-    memset(local_table_memory, 0, sizeof(int) * memory_size);
+    memset(local_table_memory[0], 0, sizeof(int) * memory_size);
+    memset(local_table_memory[1], 0, sizeof(int) * memory_size);
     memset(global_table_memory[0], 0, sizeof(int) * memory_size);
     memset(global_table_memory[1], 0, sizeof(int) * memory_size);
 
@@ -83,11 +89,13 @@ lda::~lda() {
 
     delete[] global_table_memory[0];
     delete[] global_table_memory[1];
-    delete[] local_table_memory;
+    delete[] local_table_memory[0];
+    delete[] local_table_memory[1];
 
     delete[] global_word_topic_table[0];
     delete[] global_word_topic_table[1];
-    delete[] local_word_topic_table;
+    delete[] local_word_topic_table[0];
+    delete[] local_word_topic_table[1];
 
     for(int i = 0; i < num_docs; i++)
         delete[] doc_topic_table[i];
@@ -110,25 +118,117 @@ void lda::initialize() {
             int topic = int_dis(int_gen);
             T[d][j] = topic;
             doc_topic_table[d][topic] ++;
-            local_word_topic_table[word][topic] ++;
-            local_topic_table[topic] ++;
+            local_word_topic_table[current][word][topic] ++;
+            local_topic_table[current][topic] ++;
         }
     }
 }
 
+void lda::doIter() {
+
+
+    memset(local_table_memory[current], 0, sizeof(int) * memory_size);
+
+    for(int d = 0; d < (int) W.size(); d++){
+        // calculate coefficient c which can be updated topic by topic in iterations by word
+
+        // calculate "doc-topic" bucket F and coefficient c
+        F = 0;
+        std::fill(f.begin(),f.end(),0);
+        int* curr_doc = doc_topic_table[d];
+        for(int k = 0; k < num_topics ; k++){
+            denominator = global_topic_table[current][k] + beta * vocab_size;
+            c[k] = (curr_doc[k] + alpha) / denominator;
+            if(curr_doc[k] == 0) continue;
+
+            f[k] = (beta * curr_doc[k]) / denominator;
+            F += f[k];
+        }
+
+        // sample a new topic for each word of the document
+        for(int j = 0; j < (int) W[d].size(); j++){
+            int word = W[d][j];
+            int topic = T[d][j];
+            // ignore current position, update all related value
+            doc_topic_table[d][topic] --;
+            local_word_topic_table[current][word][topic] --;
+            local_topic_table[current][topic] --;
+
+            global_word_topic_table[current][word][topic] --;
+            global_topic_table[current][topic]--;
+
+            denominator = global_topic_table[current][topic] + beta * vocab_size;
+            F -= f[topic];
+            f[topic] = (beta * curr_doc[topic]) / denominator;
+            F += f[topic];
+            c[topic] = (curr_doc[topic] + alpha) / denominator;
+            G -= g[topic];
+            g[topic] = (beta * alpha) / denominator;
+            G += g[topic];
+
+            // calculate ""topic-word" bucket E
+            E = 0;
+            std::fill(e.begin(),e.end(),0);
+            int* curr_word = global_word_topic_table[current][word];
+            for(int k = 0; k < num_topics; k++) {
+                if(curr_word[k] == 0) continue;
+                e[k] = c[k] * curr_word[k];
+                E += e[k];
+            }
+
+
+
+            // sample a new topic for the current word
+            Q = E + F + G;
+            double U = dis(gen) * Q;
+            if(U < E){
+                topic = resample(e,U);
+            }else if( U < E + F){
+                topic = resample(f, U - E);
+            }else{
+                topic = resample(g, U - E - F);
+            }
+
+            // update all related values
+
+            T[d][j] = topic;
+
+            doc_topic_table[d][topic] ++;
+            local_word_topic_table[current][word][topic] ++;
+            local_topic_table[current][topic] ++;
+
+            global_word_topic_table[current][word][topic] ++;
+            global_topic_table[current][topic]++;
+
+            denominator = global_topic_table[current][topic] + beta * vocab_size;
+            F -= f[topic];
+            f[topic] = (beta * curr_doc[topic]) / denominator;
+            F += f[topic];
+            c[topic] = (curr_doc[topic] + alpha) / denominator;
+            G -= g[topic];
+            g[topic] = (beta * alpha) / denominator;
+            G += g[topic];
+
+        }
+
+    }
+}
 
 void lda::runGibbs() {
 
     initialize();
 
-    std::vector<double> c((size_t)num_topics, 0);
-    std::vector<double> f((size_t)num_topics, 0);
-    std::vector<double> g((size_t)num_topics, 0);
-    std::vector<double> e((size_t)num_topics, 0);
-    double F,G,E,Q;
-    double denominator;
+    c.resize((size_t)num_topics, 0);
+    f.resize((size_t)num_topics, 0);
+    g.resize((size_t)num_topics, 0);
+    e.resize((size_t)num_topics, 0);
 
     CycleTimer timer;
+
+    // blocking communication only once
+    communicator->ISend(local_table_memory[current], memory_size);
+    communicator->Recv(global_table_memory[current], memory_size);
+
     // pre-calculate G and g because they are irrelevant with document
     G = 0;
     for(int k = 0; k < num_topics; k++){
@@ -136,104 +236,20 @@ void lda::runGibbs() {
         G += g[k];
     }
 
-    // blocking communication only once
-    communicator->ISend(local_table_memory, memory_size);
-    communicator->Recv(global_table_memory[current], memory_size);
-
-
     LOG("start iterations\n");
 
     for(int iter = 0; iter < num_iterations; iter++){
+
+        std::thread t([this]() {
+            doIter();
+        });
+
         if (iter != 0) {
             communicator->Wait();
-            current = 1 - current;
         }
-
-        memset(local_table_memory, 0, sizeof(int) * memory_size);
-
-        for(int d = 0; d < (int) W.size(); d++){
-            // calculate coefficient c which can be updated topic by topic in iterations by word
-
-            // calculate "doc-topic" bucket F and coefficient c
-            F = 0;
-            std::fill(f.begin(),f.end(),0);
-            int* curr_doc = doc_topic_table[d];
-            for(int k = 0; k < num_topics ; k++){
-                denominator = global_topic_table[current][k] + beta * vocab_size;
-                c[k] = (curr_doc[k] + alpha) / denominator;
-                if(curr_doc[k] == 0) continue;
-
-                f[k] = (beta * curr_doc[k]) / denominator;
-                F += f[k];
-            }
-
-            // sample a new topic for each word of the document
-            for(int j = 0; j < (int) W[d].size(); j++){
-                int word = W[d][j];
-                int topic = T[d][j];
-                // ignore current position, update all related value
-                doc_topic_table[d][topic] --;
-                local_word_topic_table[word][topic] --;
-                local_topic_table[topic] --;
-
-                global_word_topic_table[current][word][topic] --;
-                global_topic_table[current][topic]--;
-
-                denominator = global_topic_table[current][topic] + beta * vocab_size;
-                F -= f[topic];
-                f[topic] = (beta * curr_doc[topic]) / denominator;
-                F += f[topic];
-                c[topic] = (curr_doc[topic] + alpha) / denominator;
-                G -= g[topic];
-                g[topic] = (beta * alpha) / denominator;
-                G += g[topic];
-
-                // calculate ""topic-word" bucket E
-                E = 0;
-                std::fill(e.begin(),e.end(),0);
-                int* curr_word = global_word_topic_table[current][word];
-                for(int k = 0; k < num_topics; k++) {
-                    if(curr_word[k] == 0) continue;
-                    e[k] = c[k] * curr_word[k];
-                    E += e[k];
-                }
+        t.join();
 
 
-
-                // sample a new topic for the current word
-                Q = E + F + G;
-                double U = dis(gen) * Q;
-                if(U < E){
-                    topic = resample(e,U);
-                }else if( U < E + F){
-                    topic = resample(f, U - E);
-                }else{
-                    topic = resample(g, U - E - F);
-                }
-
-                // update all related values
-
-                T[d][j] = topic;
-
-                doc_topic_table[d][topic] ++;
-                local_word_topic_table[word][topic] ++;
-                local_topic_table[topic] ++;
-
-                global_word_topic_table[current][word][topic] ++;
-                global_topic_table[current][topic]++;
-
-                denominator = global_topic_table[current][topic] + beta * vocab_size;
-                F -= f[topic];
-                f[topic] = (beta * curr_doc[topic]) / denominator;
-                F += f[topic];
-                c[topic] = (curr_doc[topic] + alpha) / denominator;
-                G -= g[topic];
-                g[topic] = (beta * alpha) / denominator;
-                G += g[topic];
-
-            }
-
-        }
         double llh = getLocalLogLikelihood();
 
         double global_llh = 0;
@@ -244,8 +260,16 @@ void lda::runGibbs() {
             LOG("Iteration: %d, loglikelihood: %.8f, time: %.2fs\n", iter, global_llh, timer.get_time_elapsed());
         }
 
-        communicator->ISend(local_table_memory, memory_size);
-        communicator->IRecv(global_table_memory[1 - current], memory_size);
+        if (iter != 0) {
+            communicator->ISend(local_table_memory[current], memory_size);
+            communicator->IRecv(global_table_memory[current], memory_size);
+            current = 1 - current;
+        }
+        else {
+           memcpy(local_table_memory[1 - current], local_table_memory[current], memory_size * sizeof(int));
+            communicator->ISend(local_table_memory[1 - current], memory_size);
+            communicator->IRecv(global_table_memory[1 - current], memory_size);
+        }
     }
 
     communicator->Complete();
