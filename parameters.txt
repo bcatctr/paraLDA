@@ -1,6 +1,6 @@
 dataPath:./data/20news/20news
-#dataPath:./data/NIPS_1987-2015/NIPS_1987-2015
-numTopics:20
+dataPath:./data/NIPS_1987-2015/NIPS_1987-2015
+numTopics:100
 alpha:0.1
 beta:0.1
 numIterations:30
