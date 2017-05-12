@@ -10,8 +10,8 @@ TARGET 	= $(BIN)/paraLDA
 
 CXX  	= mpic++
 COPT 	= -O3
-CFLAGS  = $(INCLUDE) -std=c++11 -g -Wall -Werror -Wextra -Wno-unused-function -Wno-unused-parameter $(COPT) 
-LDFLAGS = -lmpi 
+CFLAGS  = $(INCLUDE) -std=c++11 -g -Wall -Werror -Wextra -Wno-unused-function -Wno-unused-parameter $(COPT) -fopenmp
+LDFLAGS = -lmpi -fopenmp
 
 MKDIR_P = @mkdir -p
 

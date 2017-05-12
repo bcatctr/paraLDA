@@ -225,9 +225,11 @@ void lda::runGibbs() {
 
     CycleTimer timer;
 
+    LOG("start sync\n");
     // blocking communication only once
     communicator->ISend(local_table_memory[current], memory_size);
     communicator->Recv(global_table_memory[current], memory_size);
+    LOG("finish sync\n");
 
     // pre-calculate G and g because they are irrelevant with document
     G = 0;

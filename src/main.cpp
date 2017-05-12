@@ -72,7 +72,8 @@ int main(int argc, char *argv[]) {
         dataLoader d(paras["dataPath"], rank, comm_size, master_count);
         int num_topics = std::stoi(paras["numTopics"]);
         int length = num_topics * d.vocabSize() + num_topics;
-        Master master(length, comm_size);
+        int block_size = length / master_count;
+        Master master(std::min(length - rank * block_size, block_size), comm_size - master_count);
         master.run();
     }
 

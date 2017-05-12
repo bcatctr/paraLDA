@@ -3,14 +3,15 @@
 #include "Log.h"
 #include "Master.h"
 #include "Utils.h"
+#include <omp.h>
 
-Master::Master(int _length, int comm_size) : length(_length) {
+Master::Master(int _length, int _worker_size) : length(_length) {
     LOG("length: %d\n", length);
     global_table = new int[length];
     buf = new int[length];
     memset(global_table, 0, sizeof(int) * length);
     memset(buf, 0, sizeof(int) * length);
-    this->comm_size = comm_size;
+    worker_size = _worker_size;
 }
 
 Master::~Master() {
@@ -29,13 +30,13 @@ void Master::run() {
         int tag = status.MPI_TAG;
         int source = status.MPI_SOURCE;
         if (tag == COMM_COMPLETE_TAG) {
-            LOG("recv complete from rank: %d\n", source);
             MPI_Recv(&tmp, 1, MPI_INT, source, tag, MPI_COMM_WORLD, &recv_status);
-            if (++finish_cnt >= comm_size - 1) break;
+            if (++finish_cnt >= worker_size) break;
         }
         else {
             MPI_Recv(buf, length, MPI_INT, source, 0, MPI_COMM_WORLD, &recv_status);
             // TODO: multi-threading update
+#pragma omp parallel for schedule(static, 64)
             for (int i=0; i<length; i++) {
                 global_table[i] += buf[i];
             }
