@@ -62,7 +62,7 @@ public:
     void printDocTopic();
 
 };
-
+/*
 struct Double{
     double val;
     double pad[7];
@@ -81,7 +81,7 @@ inline void clear_partial(Double *partial, int T){
     for(int i = 0;i < T;i++){
         partial[i].val = 0;
     }
-}
+}*/
 
 
 #endif //LDA_LDA_H
