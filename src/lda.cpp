@@ -230,8 +230,8 @@ void lda::runGibbs() {
     double old_llh = 0;
 
     //precompute the likelihood
-    double llh = getLocalLogLikelihood();
-    MPI_Allreduce(&llh, &old_llh, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORKER);
+    //double llh = getLocalLogLikelihood();
+    //MPI_Allreduce(&llh, &old_llh, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORKER);
     old_llh += getGlobalLogLikelihood();
 
 
