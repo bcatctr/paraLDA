@@ -25,10 +25,6 @@ void Communicator::ISend(int *buf, int length) {
 
 void Communicator::IRecv(int *buf, int length) {
     int block_size = length / master_cnt;
-    for (int i=0; i<master_cnt; i++) {
-        MPI_Request req;
-        MPI_Isend(&block_size, 1, MPI_INT, i, COMM_FETCH_TAG, MPI_COMM_WORLD, &req);
-    }
 
     for (int i=0; i<master_cnt; i++) {
         MPI_Irecv(buf + i * block_size, std::min(length, block_size), MPI_INT, i, 0, MPI_COMM_WORLD, &reqs[i]);
@@ -38,11 +34,6 @@ void Communicator::IRecv(int *buf, int length) {
 
 void Communicator::Recv(int *buf, int length) {
     int block_size = length / master_cnt;
-    for (int i=0; i<master_cnt; i++) {
-        MPI_Request req;
-        MPI_Isend(&block_size, 1, MPI_INT, i, COMM_FETCH_TAG, MPI_COMM_WORLD, &req);
-    }
-
     for (int i=0; i<master_cnt; i++) {
         MPI_Status status;
         MPI_Recv(buf + i * block_size, std::min(length, block_size), MPI_INT, i, 0, MPI_COMM_WORLD, &status);

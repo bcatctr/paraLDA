@@ -20,23 +20,19 @@ Master::~Master() {
 void Master::run() {
     MPI_Status status, recv_status;
     //MPI_Request req;
-    int tmp;
     LOG("start run master\n");
     while (true) {
         MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
         int tag = status.MPI_TAG;
         int source = status.MPI_SOURCE;
         if (tag == COMM_COMPLETE_TAG) break;
-        if (tag == COMM_FETCH_TAG) {
-            MPI_Recv(&tmp, 1, MPI_INT, source, tag, MPI_COMM_WORLD, &recv_status);
-            MPI_Send(global_table, length, MPI_INT, source, 0, MPI_COMM_WORLD);
-        }
         else {
             MPI_Recv(buf, length, MPI_INT, source, 0, MPI_COMM_WORLD, &recv_status);
             // TODO: multi-threading update
             for (int i=0; i<length; i++) {
                 global_table[i] += buf[i];
             }
+            MPI_Send(global_table, length, MPI_INT, source, 0, MPI_COMM_WORLD);
         }
     }
     LOG("finish run master\n");
