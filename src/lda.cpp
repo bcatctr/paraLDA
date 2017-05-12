@@ -227,12 +227,10 @@ void lda::runGibbs() {
     bool flag = true;
     double elapsed_time = 0;
     double iteration_time = 0;
-    double old_llh = 0;
 
     //precompute the likelihood
     //double llh = getLocalLogLikelihood();
     //MPI_Allreduce(&llh, &old_llh, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORKER);
-    old_llh += getGlobalLogLikelihood();
 
 
     CycleTimer timer;
@@ -242,6 +240,8 @@ void lda::runGibbs() {
     communicator->ISend(local_table_memory[current], memory_size);
     communicator->Recv(global_table_memory[current], memory_size);
     LOG("finish sync\n");
+
+    double old_llh = getLocalLogLikelihood() * (comm_size - master_count) + getGlobalLogLikelihood();
 
     // pre-calculate G and g because they are irrelevant with document
     G = 0;
@@ -268,10 +268,9 @@ void lda::runGibbs() {
         iteration_time = iter_timer.get_time_elapsed();
         elapsed_time += iteration_time;
 
-        double global_llh = 0;
         //MPI_Allreduce(&llh, &global_llh, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORKER);
 
-        global_llh += getGlobalLogLikelihood();
+        double global_llh = getLocalLogLikelihood() * (comm_size - master_count) + getGlobalLogLikelihood();
 
         double diff = std::abs(old_llh - global_llh) / std::abs(global_llh);
         old_llh = global_llh;
