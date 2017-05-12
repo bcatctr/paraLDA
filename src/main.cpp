@@ -72,13 +72,14 @@ int main(int argc, char *argv[]) {
         dataLoader d(paras["dataPath"], rank, comm_size, master_count);
         int num_topics = std::stoi(paras["numTopics"]);
         int length = num_topics * d.vocabSize() + num_topics;
-        Master master(length);
+        Master master(length, comm_size);
         master.run();
     }
 
-    LOG("finish main, %.2fs\n", timer.get_time_elapsed());
+    LOG("rank: %d, finish main, %.2fs\n", rank, timer.get_time_elapsed());
     CLOSE_LOG();
 
+    MPI_Barrier(MPI_COMM_WORLD);
     MPI_Finalize();
 
     return 0;

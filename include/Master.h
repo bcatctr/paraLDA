@@ -5,9 +5,10 @@ class Master {
     int length;
     int* global_table;
     int* buf;
+    int comm_size;
 
 public:
-    Master(int _length);
+    Master(int _length, int comm_size);
     ~Master();
     void run();
 };

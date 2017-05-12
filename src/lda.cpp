@@ -250,10 +250,10 @@ void lda::runGibbs() {
         t.join();
 
 
-        double llh = getLocalLogLikelihood();
+        //double llh = getLocalLogLikelihood();
 
         double global_llh = 0;
-        MPI_Allreduce(&llh, &global_llh, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORKER);
+        //MPI_Allreduce(&llh, &global_llh, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORKER);
 
         if (rank == master_count) {
             global_llh += getGlobalLogLikelihood();
@@ -266,11 +266,12 @@ void lda::runGibbs() {
             current = 1 - current;
         }
         else {
-           memcpy(local_table_memory[1 - current], local_table_memory[current], memory_size * sizeof(int));
+            memcpy(local_table_memory[1 - current], local_table_memory[current], memory_size * sizeof(int));
             communicator->ISend(local_table_memory[1 - current], memory_size);
             communicator->IRecv(global_table_memory[1 - current], memory_size);
         }
     }
+    communicator->Wait();
 
     communicator->Complete();
 }
