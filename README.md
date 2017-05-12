@@ -1,3 +1,3 @@
 # paraLDA
 Version:
-Hash / Sparse / sync / iteration_num
+Sparse / sync / iteration_num
