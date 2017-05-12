@@ -4,6 +4,7 @@ dataPath:./data/20news/20news
 numTopics:20
 alpha:0.1
 beta:0.1
-numIterations:30
+maxIterations:30
+threshold:1e-3
 outputFile:result
 masterCount:1
