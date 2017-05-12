@@ -138,17 +138,8 @@ void lda::runGibbs() {
 
     // blocking communication only once
     communicator->ISend(local_table_memory, memory_size);
-    memset(local_table_memory, 0, sizeof(int) * memory_size);
     communicator->Recv(global_table_memory[current], memory_size);
 
-    int sum = 0;
-    for (int i=0; i<vocab_size; i++) {
-        for (int j=0; j<num_topics; j++) {
-            sum += global_word_topic_table[current][i][j];
-        }
-    }
-
-    LOG("initial sum: %d\n", sum);
 
     LOG("start iterations\n");
 
@@ -156,14 +147,9 @@ void lda::runGibbs() {
         if (iter != 0) {
             communicator->Wait();
             current = 1 - current;
-            int sum = 0;
-            for (int i=0; i<vocab_size; i++) {
-                for (int j=0; j<num_topics; j++) {
-                    sum += global_word_topic_table[current][i][j];
-                }
-            }
-            LOG("iter %d sum: %d\n", iter, sum);
         }
+
+        memset(local_table_memory, 0, sizeof(int) * memory_size);
 
         for(int d = 0; d < (int) W.size(); d++){
             // calculate coefficient c which can be updated topic by topic in iterations by word
@@ -260,7 +246,6 @@ void lda::runGibbs() {
 
         communicator->ISend(local_table_memory, memory_size);
         communicator->IRecv(global_table_memory[1 - current], memory_size);
-        memset(local_table_memory, 0, sizeof(int) * memory_size);
     }
 
     communicator->Complete();
