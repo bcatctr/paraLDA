@@ -38,8 +38,6 @@ class lda {
 
     int current;
 
-    MPI_Comm MPI_COMM_WORKER;
-
     double* vocab_temp;
     double* topic_temp;
 
@@ -57,7 +55,7 @@ class lda {
 
 public:
     lda(std::string dataFile, std::string output, int num_topics,
-        double alpha, double beta, int max_iterations, double threshold, int rank, int comm_size, int master_count, MPI_Comm MPI_COMM_WORKER);
+        double alpha, double beta, int max_iterations, int rank, int comm_size, int master_count);
     ~lda();
     void initialize();
     void runGibbs();
