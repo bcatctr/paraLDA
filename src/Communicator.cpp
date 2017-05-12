@@ -58,7 +58,8 @@ void Communicator::Wait() {
 }
 
 void Communicator::Complete() {
+    int tmp = 0;
     for (int i=0; i<master_cnt; i++) {
-        MPI_Send(&i, 1, MPI_INT, i, COMM_COMPLETE_TAG, MPI_COMM_WORLD);
+        MPI_Send(&tmp, 1, MPI_INT, i, COMM_COMPLETE_TAG, MPI_COMM_WORLD);
     }
 }
