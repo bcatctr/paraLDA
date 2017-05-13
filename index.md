@@ -6,7 +6,7 @@ Please visit [Check Point](checkpoint.md).
 # Final Write Up
 
 ## Summary
-We have implemented a distributed and parallel version of Latent Dirichlet Allocation (LDA) algorithm using OpenMPI library and OpenMP API. Our finalized version is 2x faster than [PLDA](https://code.google.com/archive/p/plda) when both lauching 64 processes, which is a parallel C++ implementation of LDA by Google. Our 64 processes implementation also achieves 20x speedup on its own, while 70x speedup against PLDA of a single process. Our test environment is in latedays cluster from 1 process to 64 processes, with at most 8 machines and 8 processes per machine.
+We have implemented a distributed and parallel version of Latent Dirichlet Allocation (LDA) algorithm using OpenMPI library and OpenMP API. Our finalized version is 2x faster than [PLDA](https://code.google.com/archive/p/plda) when both lauching 64 processes, which is a parallel C++ implementation of LDA by Google. Our 64 processes implementation also achieves 20x speedup on its own, while 70x speedup against PLDA of a single process. Our test environment is in latedays cluster from 1 process to 64 processes, with at most 8 machines and 8 processes per machine. All of the experiments are run on two popular bag of words datasets [NIPS](https://archive.ics.uci.edu/ml/datasets/NIPS+Conference+Papers+1987-2015) and [NYTimes](https://archive.ics.uci.edu/ml/datasets/Bag+of+Words).
 
 ## Background
 
@@ -34,6 +34,8 @@ The program receives a set of documents and a fixed topic number K as input. The
 		* Randomly assign one topic to current word according to above distribution.
 		* Update global distributions.
 
+The convergence is determined by the loglikelihood calclulated in each iteration of the corpus.
+
 ### Difficulty for parallelization
 The key data structures are topic-word table and document-topic table. We can see that all the operations on these tables are +1 or -1 and in each iteration these tables will be modified. All the iterations are temporal related and can not be directly parallelized.
 
@@ -44,7 +46,7 @@ There are generally two scales to be considered when we want to gain a good spee
 
 ### sparseLDA
 <div style="text-align:center"><img src ="./sparsity.png" /></div>
-The above figure shows that both the topic-word table and document-topic table are very sparse. Thus, we can use hashmap to store the global tables if topic number is really large. Besides, we transform the calculation of the topic distribution into 3 subdivisions. They are called "topic-word" bin, "document-topic" bin and "smoothing only" bin respectively. Instead of sampling from original distribution, we sample from three bins now and we can expoit the sparsity to speedup the sampling. For the detailed implementation, please refer to [3]. When 
+The above figure shows that both the topic-word table and document-topic table are very sparse. Thus, we can use hashmap to store the global tables if topic number is really large. Besides, we transform the calculation of the topic distribution into 3 subdivisions. They are called "topic-word" bin, "document-topic" bin and "smoothing only" bin respectively. Instead of sampling from original distribution, we sample from three bins now and we can expoit the sparsity to speedup the sampling. For the detailed implementation, please refer to [3].
 
 ### Distributed LDA
 <div style="text-align:center"><img src ="./Basic_Idea.png" /></div>
@@ -59,16 +61,43 @@ If your project involved many iterations of optimization, please describe this p
 If you started with an existing piece of code, please mention it (and where it came from) here.
 
 ## Results
-How successful were you at achieving your goals? We expect results sections to differ from project to project, but we expect your evaluation to be very thorough (your project evaluation is a great way to demonstrate you understood topics from this course). Here are a few ideas:
+We use NIPS and NYTimes datasets in our experiments. The basic information about the datasets is as follows:
 
-If your project was optimizing an algorithm, please define how you measured performance. Is it wall-clock time? Speedup? An application specific rate? (e.g., moves per second, images/sec)
-Please also describe your experimental setup. What were the size of the inputs? How were requests generated?
+|        | # Vocab           | # Doc  |
+| ------------- |:-------------:| -----:|
+| NIPS      | 11463 | 5811 |
+| NYTimes   | 102660 |  299752 |
+
+NIPS is relatively small while NYTimes is quite large. The different dataset size can help us to better measure the scalability of different implementation of LDA.
+
+We run all experiments in the latedays cluster, each node has:
+
+  * Two, six-core Xeon e5-2620 v3 processors (2.4 GHz, 15MB L3 cache, hyper-threading, AVX2 instruction support)
+  * 16 GB RAM (60 GB/sec of BW)
+  * MPI + OpenMP
+ 
+There are different running setting combinations we used:
+
+| # Process |  # Topic |             LDA Implementation            |    Dataset    |
+|:---------:|:--------:|:----------------------------------:|:-------------:|
+|   1 ~ 64  | 16 ~ 256 | sync, async, plda, sync(no sparse) | NIPS, NYTimes |
+
+From the combination setting above, we choose our sequential version with sparseLDA as the baseline for our synchronous and asynchronous lda. This baseline runs ~250s on NIPS and ~1200s on NYtimes. For PLDA, we choose PLDA with one process as the baseline. This baseline runs ~600s on NIPS and ~6500s on NYtimes. When we run the LDA for different number of processes, we set the number of topic to be 128 on NIPS and 64 on NYtimes.
+
+We measured our performance on three different metrics: the average iteration time, the total running time. This is because we can run LDA for fixed number of iterations or until it is converged. The total running time measures the time of convergence and the average iteration time measures the pure speedup.
+
+
+
 Provide graphs of speedup or execute time. Please precisely define the configurations being compared. Is your baseline single-threaded CPU code? It is an optimized parallel implementation for a single CPU?
 Recall the importance of problem size. Is it important to report results for different problem sizes for your project? Do different workloads exhibit different execution behavior?
+
 IMPORTANT: What limited your speedup? Is it a lack of parallelism? (dependencies) Communication or synchronization overhead? Data transfer (memory-bound or bus transfer bound). Poor SIMD utilization due to divergence? As you try and answer these questions, we strongly prefer that you provide data and measurements to support your conclusions. If you are merely speculating, please state this explicitly. Performing a solid analysis of your implementation is a good way to pick up credit even if your optimization efforts did not yield the performance you were hoping for.
 Deeper analysis: Can you break execution time of your algorithm into a number of distinct components. What percentage of time is spent in each region? Where is there room to improve?
 Was your choice of machine target sound? (If you chose a GPU, would a CPU have been a better choice? Or vice versa.)
 
+
+![](NIPS_Total_Time.png)          |  ![](NYtimes_Total_Time.png )
+:-------------------------|-------------------------:
 
 
 ## References
