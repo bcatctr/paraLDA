@@ -111,10 +111,27 @@ IMPORTANT: What limited your speedup? Is it a lack of parallelism? (dependencies
 Deeper analysis: Can you break execution time of your algorithm into a number of distinct components. What percentage of time is spent in each region? Where is there room to improve?
 Was your choice of machine target sound? (If you chose a GPU, would a CPU have been a better choice? Or vice versa.)
 
+<table width="100%" border="0" cellpadding="0" bordercolor="white" bgcolor="white">
 
-![](NIPS_Total_Time.png)          |  ![](NYtimes_Total_Time.png )
-:-------------------------|-------------------------:
+<!-- row 1 -->
+<tr>
+<td>
+<div style="text-align:center"><img src ="./NIPS_Total_Time.png" /></div>
+</td>
+<td>
+<div style="text-align:center"><img src ="./NYtimes_Total_Time.png" /></div>
+</td>
+</tr>
+<tr>
+<td>
+<div style="text-align:center"><img src ="./NIPS_Iter_Time.png" /></div>
+</td>
+<td>
+<div style="text-align:center"><img src ="./NYtimes_iter_Time.png" /></div>
+</td>
+</tr>
 
+</table>
 
 ## References
 [1] Blei, David M., Andrew Y. Ng, and Michael I. Jordan. "Latent dirichlet allocation." Journal of machine Learning research 3.Jan (2003): 993-1022.
