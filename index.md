@@ -127,7 +127,7 @@ Was your choice of machine target sound? (If you chose a GPU, would a CPU have b
 <div style="text-align:center"><img src ="./NIPS_Iter_Time.png" /></div>
 </td>
 <td>
-<div style="text-align:center"><img src ="./NYtimes_iter_Time.png" /></div>
+<div style="text-align:center"><img src ="./NYtimes_Iter_Time.png" /></div>
 </td>
 </tr>
 
