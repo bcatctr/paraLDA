@@ -54,20 +54,25 @@ Noticing that this design's difference with original LDA algorithm. In this desi
 
 We implemented and compared two distribution model: synchronized and asynchronized model. We used MPI message passing interface to implement the communication between different processes.
 
-Synchronized model:
-<div style="text-align:center"><img src ="./sync.png" /></div>
-Synchronized model is also known as Bulk Synchronous Parallel (BSP). The key idea is that all the worker nodes are equal. There will be a synchronization barrier after each iteration and workers can communicate with each other during this barrier. So the communication and computation parts have a clear boundary and the whole system's speed will be bounded by a slow worker. In our implementation, the global distribution consists of global topic word table and global topic table. These two global tables are simply equals to the sum of each local table. So we will call MPI_Allreduce after each iteration to let worker get the latest global distribution. Since MPI is a symmetric execution model, this MPI_Allreduce implies a synchronization barrier between iterations.
+**Synchronized model:**
 
+Synchronized model is also known as Bulk Synchronous Parallel (BSP). The key idea is that all the worker nodes are equal. There will be a synchronization barrier after each iteration and workers can communicate with each other during this barrier. So the communication and computation parts have a clear boundary and the whole system's speed will be bounded by a slow worker. In our implementation, the global distribution consists of global topic word table and global topic table. These two global tables are simply equals to the sum of each local table. So we will call MPI_Allreduce after each iteration to let worker get the latest global distribution. Since MPI is a symmetric execution model, this MPI_Allreduce implies a synchronization barrier between iterations.
+<div style="text-align:center"><img src ="./sync.png" /></div>
+
+**Asynchronized model**
+
+The asynchronized model needs one (or more) master nodes to manage the global distribution. Each worker will push its updates of distribution to the master and fetch the new global distribution after each iteration regardless other workers' schedule. So asynchronized algorithm's speed won't be hurt by very slow workers (but the convergece can still be hurt!). There exists two potential issues that may hurt the speed and the solution we find to fix:
+
+1. The master node needs to merge the updates of different workers and make sure the distribution is consistent. So the master may become a bottleneck. Consider that update the model is basically add one large array to another, we can use OpenMP to accelarate it. We set the OpenMP block to 64 to prevent the false sharing problem.
+2. Compare to the easy MPI_Allreduce in synchronized model, the workers need to send update to server, wait server merge the update and then fetch the new global distribution. That is a more complex process and will take much more time than MPI_Allreduce. Consider that in asynchronized model, we are not restricted to communicate after each iteration's computation. So we will do Gibbs sampling of iteration I, sending updates of iteration I - 1 and fetching new global distribution for iteration I + 1 in parallel to hide the long communication latency.
+
+We expect that asynchronized model will have better per iteration speed than synchronized model on large dataset and large topic size since the communication time not negligible and can be hidden in asynchronized model. But the time to convergence is not that clear. The asynchronization makes it hard to record the change of likelihood and decide the stopping criteria. If we choose to stop the algorithm after a certain count of iterations, the asynchronized model will have even better superiority.
 
 <div style="text-align:center"><img src ="./async.png" /></div>
 
-Tell us how your implementation works. Your description should be sufficiently detailed to provide the course staff a basic understanding of your approach. Again, it might be very useful to include a figure here illustrating components of the system and/or their mapping to parallel hardware.
+**Other consideration**
 
-Describe the technologies used. What language/APIs? What machines did you target?
-Describe how you mapped the problem to your target parallel machine(s). IMPORTANT: How do the data structures and operations you described in part 2 map to machine concepts like cores and threads. (or warps, thread blocks, gangs, etc.)
-Did you change the original serial algorithm to enable better mapping to a parallel machine?
-If your project involved many iterations of optimization, please describe this process as well. What did you try that did not work? How did you arrive at your solution? The notes you've been writing throughout your project should be helpful here. Convince us you worked hard to arrive at a good solution.
-If you started with an existing piece of code, please mention it (and where it came from) here.
+Although there are some open sourced parallel LDA implementations, we choose to build our system from scratch in order to understand all the details better. We will compare our implementation with the Google's PLDA because it is a C++ implemented, MPI based (which means the tools it used is very similar to ours) lightweight implementation. Some other implementations may be too heavyweighted (using large third party libraries), or use different techniques (Java, Hadoop).
 
 ## Results
 How successful were you at achieving your goals? We expect results sections to differ from project to project, but we expect your evaluation to be very thorough (your project evaluation is a great way to demonstrate you understood topics from this course). Here are a few ideas:
