@@ -43,7 +43,8 @@ The most expensive parts of code are the calculation of topic distribution p(top
 There are generally two scales to be considered when we want to gain a good speedup: topic number and corpus size. Our implementation tries to perform well when either scales up.
 
 ###sparseLDA
-
+<div style="text-align:center"><img src ="./sparsity.png" /></div>
+The above figure shows that 
 
 ###Distributed LDA
 <div style="text-align:center"><img src ="./Basic_Idea.png" /></div>
@@ -82,3 +83,9 @@ Was your choice of machine target sound? (If you chose a GPU, would a CPU have b
 [5] Yu, Hsiang-Fu, et al. "A scalable asynchronous distributed algorithm for topic modeling." Proceedings of the 24th International Conference on World Wide Web. ACM, 2015.
 
 [6] Yuan, Jinhui, et al. "Lightlda: Big topic models on modest computer clusters." Proceedings of the 24th International Conference on World Wide Web. ACM, 2015.
+
+[7] Ian Porteous, David Newman, Alexander Ihler, Arthur Asuncion, Padhraic Smyth and Max Welling. Fast Collapsed Gibbs Sampling For Latent Dirichlet Allocation. In KDD’ 2008.
+
+[8] David Mimno. Efficient Inference for Multinomial Mixed Membership Models.
+
+[9] Aaron Q. Li, Amr Ahmed, Sujith Ravi, and Alexander J. Smola. Reducing the sampling complexity of topic models. In KDD’ 2014.
