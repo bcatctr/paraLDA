@@ -188,3 +188,6 @@ Besides, the asynchronized lda performs best with the increasing of topic number
 [8] David Mimno. Efficient Inference for Multinomial Mixed Membership Models.
 
 [9] Aaron Q. Li, Amr Ahmed, Sujith Ravi, and Alexander J. Smola. Reducing the sampling complexity of topic models. In KDD’ 2014.
+
+## WORK
+equal work was performed by both project members.
