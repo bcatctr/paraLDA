@@ -132,7 +132,7 @@ Secondly, noting that the asychronized implementation performances best in avera
 
 Thirdly, the super linearity occurred for PLDA in large dataset NYTimes. This might result from the inner implementation of PLDA. The split of the corpus help  one process to hold the data structures in caches or memories.
 
-We can not reach the linear speedup for both synchronized and asynchronized implementation. The synchronized lda will have to Allreduce and communicate between each other. This communication cost slow down the entire program. As for asychronzied lda, the master node will have to sequentially reduce all the updates. which makes the client to wait for master even though some latency can be hidden. Another reason is that we launch 
+We can not reach the linear speedup for both synchronized and asynchronized implementation. The synchronized lda will have to Allreduce and communicate between each other. This communication cost slow down the entire program. As for asychronzied lda, the master node will have to sequentially reduce all the updates. which makes the client to wait for master even though some latency can be hidden. Another reason is that we launch 64 
 
 
 <table width="100%" border="0" cellpadding="0" bordercolor="white" bgcolor="white">
@@ -153,19 +153,20 @@ We can not reach the linear speedup for both synchronized and asynchronized impl
 </table>
 The figure above is the logLikelihood change ratio over time for three different lda. We run experiments on NIPS and NYTimes respectively. As above mentioned, we set the number of topic to be 128 on NIPS and 64 on NYtimes. 
 
-This fi
+This figure shows that our implementation of both synchronized and asynchronized lda will converge faster and better than PLDA. 
+
+The synchronized is much better than asynchronized lda in NIPS dataset while they are nearly the same in NYTime dataset. This supports the claim that asyncronized performs better in larger dataset. The reason might be that the communucation cost will become relatively small in large dataset for larger computation cost.
+
+Noting that there will be a "burst" in all the graphs which means the lda finds the right distribution and quickly converges to it.
 
 
 <div style="text-align:center"><img src ="./TopicItertime.png" /></div>
 
+The above figure shows the average iteration time over topic size for four different lda. Both sync(no sparse) and PLDA do not provide sparseLDA. These two lda will increase faster in average iteration time over topic size compared with those with sparseLDA. sparseLDA do provides scalability in topic number.
+
+Besides, the asynchronized lda performs best with the increasing of topic number. This is because the asynchronized lda will hide part of computaion cost in communication cost when computation increases.
 
 
-Provide graphs of speedup or execute time. Please precisely define the configurations being compared. Is your baseline single-threaded CPU code? It is an optimized parallel implementation for a single CPU?
-Recall the importance of problem size. Is it important to report results for different problem sizes for your project? Do different workloads exhibit different execution behavior?
-
-IMPORTANT: What limited your speedup? Is it a lack of parallelism? (dependencies) Communication or synchronization overhead? Data transfer (memory-bound or bus transfer bound).   If you are merely speculating, please state this explicitly. Performing a solid analysis of your implementation is a good way to pick up credit even if your optimization efforts did not yield the performance you were hoping for.
-Deeper analysis: Can you break execution time of your algorithm into a number of distinct components. What percentage of time is spent in each region? Where is there room to improve?
-Was your choice of machine target sound? (If you chose a GPU, would a CPU have been a better choice? Or vice versa.)
 
 
 
