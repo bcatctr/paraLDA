@@ -37,8 +37,18 @@ The program receives a set of documents and a fixed topic number K as input. The
 ### Difficulty for parallelization
 The key data structures are topic-word table and document-topic table. We can see that all the operations on these tables are +1 or -1 and in each iteration these tables will be modified. All the iterations are temporal related and can not be directly parallelized.
 
-The most expensive parts of code are the calculation of topic distribution p(topic t \| document d, word w) and the sampling of topic according to this distribution. The sampling part is intrinsically sequential and can not be parallelized. The distribution calculation is too short to be parallelized unless there are millions of topics. This program is not restrictly data-parallel, but we can parallel on documents and loose some restrictions. The locality of the program is good because all the topic-related values are stored continuously and can be cached. However, when the corpus size or topic number is too large, the memory 
+The most expensive parts of code are the calculation of topic distribution p(topic t \| document d, word w) and the sampling of topic according to this distribution. The sampling part is intrinsically sequential and can not be parallelized. The distribution calculation is too short to be parallelized unless there are millions of topics. This program is not restrictly data-parallel, but we can parallel on documents and loose some restrictions. The locality of the program is good because all the topic-related values are stored continuously and can be cached. However, when the corpus size or topic number is too large, the memory can not hold all the data structures.
+
 ## Approach
+There are generally two scales to be considered when we want to gain a good speedup: topic number and corpus size. Our implementation tries to perform well when either scales up.
+
+###sparseLDA
+
+
+###Distributed LDA
+<div style="text-align:center"><img src ="./Basic_Idea.png" /></div>
+<div style="text-align:center"><img src ="./sync.png" /></div>
+<div style="text-align:center"><img src ="./async.png" /></div>
 Tell us how your implementation works. Your description should be sufficiently detailed to provide the course staff a basic understanding of your approach. Again, it might be very useful to include a figure here illustrating components of the system and/or their mapping to parallel hardware.
 
 Describe the technologies used. What language/APIs? What machines did you target?
