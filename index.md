@@ -102,6 +102,28 @@ From the combination setting above, we choose our sequential version with sparse
 
 We measured our performance on two different metrics: the average iteration time, the total running time. This is because we can run LDA for fixed number of iterations or until it is converged. The total running time measures the performance of running until convergence and the average iteration time measures the performance of running fixed number of iterations.
 
+<table width="100%" border="0" cellpadding="0" bordercolor="white" bgcolor="white">
+
+<!-- row 1 -->
+<tr>
+<td>
+<div style="text-align:center"><img src ="./NIPS_Total_Time.png" /></div>
+</td>
+<td>
+<div style="text-align:center"><img src ="./NYtimes_Total_Time.png" /></div>
+</td>
+</tr>
+<tr>
+<td>
+<div style="text-align:center"><img src ="./NIPS_Iter_Time.png" /></div>
+</td>
+<td>
+<div style="text-align:center"><img src ="./NYtimes_Iter_Time.png" /></div>
+</td>
+</tr>
+
+</table>
+
 The Figure above is the total running time and average iteration time speedup for three different implementation of LDA. We run experiments on NIPS and NYTimes respectively. As above mentioned, we set the number of topic to be 128 on NIPS and 64 on NYtimes. 
 
 First of all, the speedup of average iteration time will always be larger than that of total running time. This is because the split of data will slow down the convergence speed. Although the running time for each iteration goes down fast, the total time for convergence will not go down so fast.
@@ -119,9 +141,6 @@ IMPORTANT: What limited your speedup? Is it a lack of parallelism? (dependencies
 Deeper analysis: Can you break execution time of your algorithm into a number of distinct components. What percentage of time is spent in each region? Where is there room to improve?
 Was your choice of machine target sound? (If you chose a GPU, would a CPU have been a better choice? Or vice versa.)
 
-
-![](NIPS_Total_Time.png)          |  ![](NYtimes_Total_Time.png )
-:-------------------------|-------------------------:
 
 
 ## References
