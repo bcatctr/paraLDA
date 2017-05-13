@@ -128,11 +128,35 @@ The Figure above is the total running time and average iteration time speedup fo
 
 First of all, the speedup of average iteration time will always be larger than that of total running time. This is because the split of data will slow down the convergence speed. Although the running time for each iteration goes down fast, the total time for convergence will not go down so fast.
 
-Secondly, noting that the asychronized implementation performances best in average iteration time speedup when launching 64 processes. This means the aynchronized implementation does help when the workload is large and unbalanced. Because our NIPS dataset is relatively small and the workloads are balanced, the asynchronized will be worse than synchronized. Besides, the asynchronized implementation will have larger communication cost, thus it will be better in large dataset.
+Secondly, noting that the asychronized implementation performances best in average iteration time speedup when launching 64 processes. This means the aynchronized implementation does help when the workload is large and unbalanced. Because our NIPS dataset is relatively small and the workloads are balanced, the asynchronized will be worse than synchronized. Besides, the asynchronized implementation will have larger communication cost, thus it will be better in large dataset. We calculate the time for synchronized lda on communication and computation in different datasets. We find the communucation time is only 1/80 of computation time in NIPS while 1/8 in NYTimes. This means the synchronized lda will communicate more in larger dataset and the performance will
 
 Thirdly, the super linearity occurred for PLDA in large dataset NYTimes. This might result from the inner implementation of PLDA. The split of the corpus help  one process to hold the data structures in caches or memories.
 
-We can not reach the linear speedup for both synchronized and asynchronized implementation. The synchronized lda will have to Allreduce and communicate between each other. This communication cost slow down the entire program. As for asychronzied lda, the master node will have to sequentially reduce all the updates. which makes the client to wait for master even though some latency can be hidden. 
+We can not reach the linear speedup for both synchronized and asynchronized implementation. The synchronized lda will have to Allreduce and communicate between each other. This communication cost slow down the entire program. As for asychronzied lda, the master node will have to sequentially reduce all the updates. which makes the client to wait for master even though some latency can be hidden. Another reason is that we launch 
+
+
+<table width="100%" border="0" cellpadding="0" bordercolor="white" bgcolor="white">
+
+<!-- row 1 -->
+
+<tr>
+<td>
+<div style="text-align:center"><img src ="./Loss_NIPS.png" /></div>
+</td>
+</tr>
+<tr>
+<td>
+<div style="text-align:center"><img src ="./Loss_NY.png" /></div>
+</td>
+</tr>
+
+</table>
+The figure above is the logLikelihood change ratio over time for three different lda. We run experiments on NIPS and NYTimes respectively. As above mentioned, we set the number of topic to be 128 on NIPS and 64 on NYtimes. 
+
+This fi
+
+
+<div style="text-align:center"><img src ="./TopicItertime.png" /></div>
 
 
 
