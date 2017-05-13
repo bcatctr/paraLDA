@@ -92,7 +92,7 @@ We run all experiments in the latedays cluster, each node has:
   * 16 GB RAM (60 GB/sec of BW)
   * MPI + OpenMP
  
-There are different running setting combinations we used:
+We will run at most 8 nodes with 8 processes per node, which count to 64 processes. There are different running setting combinations we used:
 
 | # Process |  # Topic |             LDA Implementation            |    Dataset    |
 |:---------:|:--------:|:----------------------------------:|:-------------:|
@@ -100,14 +100,22 @@ There are different running setting combinations we used:
 
 From the combination setting above, we choose our sequential version with sparseLDA as the baseline for our synchronous and asynchronous lda. This baseline runs ~250s on NIPS and ~1200s on NYtimes. For PLDA, we choose PLDA with one process as the baseline. This baseline runs ~600s on NIPS and ~6500s on NYtimes. When we run the LDA for different number of processes, we set the number of topic to be 128 on NIPS and 64 on NYtimes.
 
-We measured our performance on three different metrics: the average iteration time, the total running time. This is because we can run LDA for fixed number of iterations or until it is converged. The total running time measures the time of convergence and the average iteration time measures the pure speedup.
+We measured our performance on two different metrics: the average iteration time, the total running time. This is because we can run LDA for fixed number of iterations or until it is converged. The total running time measures the performance of running until convergence and the average iteration time measures the performance of running fixed number of iterations.
+
+The Figure above is the total running time and average iteration time speedup for three different implementation of LDA. We run experiments on NIPS and NYTimes respectively. As above mentioned, we set the number of topic to be 128 on NIPS and 64 on NYtimes. 
+
+First of all, the speedup of average iteration time will always be larger than that of total running time. This is because the split of data will slow down the convergence speed. Although the running time for each iteration goes down fast, the total time for convergence will not go down so fast.
+
+Secondly, noting that the asychronized implementation performances best in average iteration time speedup when launching 64 processes. This means the aynchronized implementation does help when the workload is large and unbalanced. Because our NIPS dataset is relatively small and the workloads are balanced, the asynchronized will be worse than synchronized. Besides, the asynchronized implementation will have larger communication cost, thus it will be better in large dataset.
+
+Thirdly, the super linearity occurred for PLDA in large dataset NYTimes. This might result from the inner implementation of PLDA. The split of the corpus help  one process to hold the data structures in caches or memories.
 
 
 
 Provide graphs of speedup or execute time. Please precisely define the configurations being compared. Is your baseline single-threaded CPU code? It is an optimized parallel implementation for a single CPU?
 Recall the importance of problem size. Is it important to report results for different problem sizes for your project? Do different workloads exhibit different execution behavior?
 
-IMPORTANT: What limited your speedup? Is it a lack of parallelism? (dependencies) Communication or synchronization overhead? Data transfer (memory-bound or bus transfer bound). Poor SIMD utilization due to divergence? As you try and answer these questions, we strongly prefer that you provide data and measurements to support your conclusions. If you are merely speculating, please state this explicitly. Performing a solid analysis of your implementation is a good way to pick up credit even if your optimization efforts did not yield the performance you were hoping for.
+IMPORTANT: What limited your speedup? Is it a lack of parallelism? (dependencies) Communication or synchronization overhead? Data transfer (memory-bound or bus transfer bound).   If you are merely speculating, please state this explicitly. Performing a solid analysis of your implementation is a good way to pick up credit even if your optimization efforts did not yield the performance you were hoping for.
 Deeper analysis: Can you break execution time of your algorithm into a number of distinct components. What percentage of time is spent in each region? Where is there room to improve?
 Was your choice of machine target sound? (If you chose a GPU, would a CPU have been a better choice? Or vice versa.)
 
