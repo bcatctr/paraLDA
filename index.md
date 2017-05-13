@@ -47,9 +47,20 @@ There are generally two scales to be considered when we want to gain a good spee
 The above figure shows that both the topic-word table and document-topic table are very sparse. The 
 
 ### Distributed LDA
+
+Since the Gibbs sampling part of the LDA algorithm is essentially sequential, we have to use modified algorithm that approximate the original algorithm in order to exploit parallelism. The basic LDA algorithm needs to iterate through the words of the whole corpus and update the distribution one by one. After tens or thousands of iterations, the distribution will converge and stop to change. To exploit parallelism, we need to use multiple workers. Each worker will be assigned with a sub-corpus and compute local distribution based on the sub-corpus. After each iteration, according to the different design, the workers will either communicate with each other or communicate with master nodes to update the global distribution. 
 <div style="text-align:center"><img src ="./Basic_Idea.png" /></div>
+Noticing that this design's difference with original LDA algorithm. In this design, the global distribution will be updated by a 'batch' mode, rather than word by word. So convergence will differ from the original algorithm. If we have N worker nodes, these nodes will have 1/N workload each iteration comparing to original algorithm. So the running speed of each iteration will be much faster. But typically it needs more iterations to converge.
+
+We implemented and compared two distribution model: synchronized and asynchronized model. We used MPI message passing interface to implement the communication between different processes.
+
+Synchronized model:
 <div style="text-align:center"><img src ="./sync.png" /></div>
+Synchronized model is also known as Bulk Synchronous Parallel (BSP). The key idea is that all the worker nodes are equal. There will be a synchronization barrier after each iteration and workers can communicate with each other during this barrier. So the communication and computation parts have a clear boundary and the whole system's speed will be bounded by a slow worker. In our implementation, the global distribution consists of global topic word table and global topic table. These two global tables are simply equals to the sum of each local table. So we will call MPI_Allreduce after each iteration to let worker get the latest global distribution. Since MPI is a symmetric execution model, this MPI_Allreduce implies a synchronization barrier between iterations.
+
+
 <div style="text-align:center"><img src ="./async.png" /></div>
+
 Tell us how your implementation works. Your description should be sufficiently detailed to provide the course staff a basic understanding of your approach. Again, it might be very useful to include a figure here illustrating components of the system and/or their mapping to parallel hardware.
 
 Describe the technologies used. What language/APIs? What machines did you target?
